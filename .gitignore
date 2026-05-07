@@ -1,0 +1,67 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Backend - Java/Spring Boot
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+backend/.idea/
+backend/.vscode/
+backend/*.iws
+backend/*.iml
+backend/*.ipr
+backend/.classpath
+backend/.project
+backend/.settings/
+backend/.factorypath
+backend/.springBeans
+backend/.sts4-cache
+backend/.apt_generated
+backend/out*.txt
+backend/build/
+backend/nbproject/private/
+backend/nbbuild/
+backend/dist/
+backend/nbdist/
+backend/.nb-gradle/
+backend/HELP.md
+
+# Frontend - Node/React
+frontend/public/img/produtos/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+frontend/.idea/
+frontend/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Root
+node_modules/
+package-lock.json
+test.js
