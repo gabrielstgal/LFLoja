@@ -130,6 +130,21 @@ export const CartProvider = ({ children }) => {
     setCartItems(prev => prev.map(item => item.cartId === cartId ? { ...item, quantity: newQuantity } : item));
   };
 
+  const updateSize = (cartId, newSize) => {
+    setCartItems(prev => {
+      const item = prev.find(i => i.cartId === cartId);
+      if (!item) return prev;
+      const newCartId = `${item.id}-${newSize || 'default'}`;
+      const existing = prev.find(i => i.cartId === newCartId && i.cartId !== cartId);
+      if (existing) {
+        return prev
+          .map(i => i.cartId === newCartId ? { ...i, quantity: i.quantity + item.quantity } : i)
+          .filter(i => i.cartId !== cartId);
+      }
+      return prev.map(i => i.cartId === cartId ? { ...i, selectedSize: newSize, cartId: newCartId } : i);
+    });
+  };
+
   const clearCart = () => {
     setCartItems([]);
     setCupomAplicado(null);
@@ -139,7 +154,7 @@ export const CartProvider = ({ children }) => {
 
   return (
     <CartContext.Provider value={{
-      cartItems, addToCart, removeFromCart, updateQuantity, clearCart,
+      cartItems, addToCart, removeFromCart, updateQuantity, updateSize, clearCart,
       cartSubtotal, cartTotal, cartCount, getPrecoEfetivo,
       isCartOpen, setIsCartOpen,
       cupomAplicado, cupomDados, desconto, aplicarCupom, removerCupom

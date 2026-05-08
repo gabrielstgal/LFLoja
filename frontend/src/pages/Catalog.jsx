@@ -24,6 +24,7 @@ const Catalog = () => {
   const [buscaInput, setBuscaInput] = useState(searchParams.get('busca') || '');
   const [precoMin, setPrecoMin] = useState(0);
   const [precoMax, setPrecoMax] = useState(1000);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     api.get('/categorias')
@@ -89,9 +90,13 @@ const Catalog = () => {
 
   return (
     <div className="catalog-container">
-      <aside className="catalog-sidebar">
-        <h3>Filtros</h3>
+      <aside className={`catalog-sidebar ${filtersOpen ? 'catalog-sidebar-open' : ''}`}>
+        <h3 className="catalog-filters-toggle" onClick={() => setFiltersOpen(prev => !prev)}>
+          Filtros
+          <svg className={`catalog-filters-arrow ${filtersOpen ? 'open' : ''}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </h3>
 
+        <div className="catalog-filters-content">
         <div>
           <h4 className="catalog-filter-title">Categorias</h4>
           <ul className="catalog-filter-list">
@@ -157,6 +162,7 @@ const Catalog = () => {
               <span className="catalog-price-value">R$ {precoMax}</span>
             </div>
           </div>
+        </div>
         </div>
       </aside>
 

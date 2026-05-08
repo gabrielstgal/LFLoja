@@ -3,77 +3,48 @@
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
-  gap: 3rem;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.client-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0;
   flex-wrap: wrap;
 }
 
-.client-sidebar {
-  width: 250px;
-  flex-shrink: 0;
-}
-
-.client-profile-card {
-  background-color: var(--color-surface);
-  padding: 2rem;
-  border-radius: 12px;
-  border: 1px solid var(--color-border);
-  position: sticky;
-  top: 100px;
-}
-
-.client-avatar {
-  width: 72px;
-  height: 72px;
-  background-color: var(--color-primary);
-  border-radius: 50%;
-  margin: 0 auto 1.25rem auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  font-weight: bold;
-  color: white;
-}
-
-.client-name {
-  text-align: center;
-  margin-bottom: 0.25rem;
-  font-size: 1.1rem;
-}
-
-.client-email {
-  text-align: center;
+.client-tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--color-text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 1.5rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+  font-family: var(--font-family);
 }
 
-.client-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.client-nav-btn {
-  text-align: left;
-}
-
-.client-nav-btn-inactive {
-  background-color: transparent;
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-}
-
-.client-nav-btn-inactive:hover {
+.client-tab:hover {
   color: var(--color-text);
-  border-color: var(--color-text-muted);
 }
 
-.client-nav-btn-logout {
-  background-color: transparent;
+.client-tab-active {
   color: var(--color-primary);
-  border: 1px solid transparent;
-  margin-top: 0.5rem;
+  border-bottom-color: var(--color-primary);
+}
+
+.client-tab-logout {
+  margin-left: auto;
+  color: var(--color-text-muted);
+}
+
+.client-tab-logout:hover {
+  color: #e53935;
 }
 
 .client-main {
@@ -430,9 +401,10 @@
 }
 
 @media (max-width: 768px) {
-  .client-container { flex-direction: column; padding: 2rem 4%; gap: 1.5rem; }
-  .client-sidebar { width: 100%; }
-  .client-profile-card { position: static; }
+  .client-container { padding: 2rem 4%; gap: 1.5rem; }
+  .client-tabs { gap: 0; }
+  .client-tab { padding: 0.6rem 1rem; font-size: 0.8rem; }
+  .client-tab-logout { margin-left: 0; }
   .client-order-header { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
   .client-order-total { margin-left: 0; }
   .client-order-tracker-wrapper { padding: 1rem; }

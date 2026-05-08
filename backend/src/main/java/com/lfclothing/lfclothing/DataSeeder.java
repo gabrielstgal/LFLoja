@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 public class DataSeeder {
@@ -30,6 +31,14 @@ public class DataSeeder {
                 ));
                 System.out.println("Categorias padrão inseridas com sucesso!");
             }
+
+            // Gerar código para produtos existentes que não têm
+            repository.findAll().stream()
+                .filter(p -> p.getCodigo() == null || p.getCodigo().isBlank())
+                .forEach(p -> {
+                    p.setCodigo("LF-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
+                    repository.save(p);
+                });
 
             boolean jaTemOriginais = repository.findAll().stream()
                     .anyMatch(p -> p.getNome().contains("Camiseta Classic Areia"));

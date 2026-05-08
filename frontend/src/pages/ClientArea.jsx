@@ -87,7 +87,7 @@ const ClientArea = () => {
         data.sort((a, b) => new Date(b.dataCriacao) - new Date(a.dataCriacao));
         setOrders(data);
       })
-      .catch(() => setOrders([]))
+      .catch(() => { setOrders([]); toast.error('Erro ao carregar pedidos. Verifique sua conexão.'); })
       .finally(() => setLoading(false));
   }, [user, navigate]);
 
@@ -136,26 +136,18 @@ const ClientArea = () => {
 
   return (
     <div className="client-container">
-      <aside className="client-sidebar">
-        <div className="client-profile-card">
-          <div className="client-avatar">{(user.nome || 'U').charAt(0).toUpperCase()}</div>
-          <h3 className="client-name">{user.nome || 'Usuário'}</h3>
-          <p className="client-email">{user.email}</p>
-
-          <nav className="client-nav">
-            <button className={`btn-primary client-nav-btn ${activeTab === 'pedidos' ? '' : 'client-nav-btn-inactive'}`} onClick={() => handleTabChange('pedidos')}>
-              Pedidos ({orders.length})
-            </button>
-            <button className={`btn-primary client-nav-btn ${activeTab === 'favoritos' ? '' : 'client-nav-btn-inactive'}`} onClick={() => handleTabChange('favoritos')}>
-              Favoritos ({favorites.length})
-            </button>
-            <button className={`btn-primary client-nav-btn ${activeTab === 'dados' ? '' : 'client-nav-btn-inactive'}`} onClick={() => handleTabChange('dados')}>
-              Meus Dados
-            </button>
-            <button className="btn-primary client-nav-btn client-nav-btn-logout" onClick={() => { logout(); navigate('/'); }}>Sair da Conta</button>
-          </nav>
-        </div>
-      </aside>
+      <div className="client-tabs">
+        <button className={`client-tab ${activeTab === 'pedidos' ? 'client-tab-active' : ''}`} onClick={() => handleTabChange('pedidos')}>
+          Pedidos ({orders.length})
+        </button>
+        <button className={`client-tab ${activeTab === 'favoritos' ? 'client-tab-active' : ''}`} onClick={() => handleTabChange('favoritos')}>
+          Favoritos ({favorites.length})
+        </button>
+        <button className={`client-tab ${activeTab === 'dados' ? 'client-tab-active' : ''}`} onClick={() => handleTabChange('dados')}>
+          Meus Dados
+        </button>
+        <button className="client-tab client-tab-logout" onClick={() => { logout(); navigate('/'); }}>Sair</button>
+      </div>
 
       <div className="client-main">
         {/* === ABA PEDIDOS === */}

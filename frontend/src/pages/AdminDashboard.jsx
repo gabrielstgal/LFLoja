@@ -39,9 +39,22 @@ const AdminDashboard = () => {
   const [catEditId, setCatEditId] = useState(null);
   const [catUploading, setCatUploading] = useState(false);
 
+  // Banners
+  const [bannersList, setBannersList] = useState([]);
+  const [bannerImagem, setBannerImagem] = useState('');
+  const [bannerTitulo, setBannerTitulo] = useState('');
+  const [bannerSubtitulo, setBannerSubtitulo] = useState('');
+  const [bannerBadge, setBannerBadge] = useState('');
+  const [bannerTextoBotao, setBannerTextoBotao] = useState('');
+  const [bannerLink, setBannerLink] = useState('');
+  const [bannerOrdem, setBannerOrdem] = useState(0);
+  const [bannerAtivo, setBannerAtivo] = useState(true);
+  const [bannerEditId, setBannerEditId] = useState(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
+
   useEffect(() => {
     if (!user || !isAdmin) { toast.error("Administradores apenas."); navigate('/'); return; }
-    Promise.all([loadProducts(), loadOrders(), loadCupons(), loadCategorias()]).finally(() => setLoadingData(false));
+    Promise.all([loadProducts(), loadOrders(), loadCupons(), loadCategorias(), loadBanners()]).finally(() => setLoadingData(false));
   }, [user, isAdmin, navigate]);
 
   const loadProducts = () => {
@@ -117,6 +130,78 @@ const AdminDashboard = () => {
       toast.success('Categoria removida!');
       loadCategorias();
     } catch { toast.error('Erro ao remover categoria.'); }
+  };
+
+  // --- Banners ---
+  const loadBanners = () => {
+    return api.get('/banners/todos')
+      .then(res => setBannersList(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setBannersList([]));
+  };
+
+  const clearBannerForm = () => {
+    setBannerImagem(''); setBannerTitulo(''); setBannerSubtitulo(''); setBannerBadge(''); setBannerTextoBotao(''); setBannerLink(''); setBannerOrdem(0); setBannerAtivo(true); setBannerEditId(null);
+  };
+
+  const handleBannerImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBannerUploading(true);
+    try {
+      const url = await uploadFile(file);
+      if (url) { setBannerImagem(url); toast.success('Imagem do banner enviada!'); }
+    } catch { toast.error('Falha ao enviar imagem.'); }
+    finally { setBannerUploading(false); }
+  };
+
+  const handleSalvarBanner = async (e) => {
+    e.preventDefault();
+    if (!bannerImagem.trim()) { toast.error('Envie uma imagem para o banner.'); return; }
+    const payload = {
+      urlImagem: bannerImagem,
+      titulo: bannerTitulo || null,
+      subtitulo: bannerSubtitulo || null,
+      badge: bannerBadge || null,
+      textoBotao: bannerTextoBotao || null,
+      link: bannerLink || null,
+      ordem: bannerOrdem,
+      ativo: bannerAtivo,
+    };
+    try {
+      if (bannerEditId) {
+        await api.put(`/banners/${bannerEditId}`, payload);
+        toast.success('Banner atualizado!');
+      } else {
+        await api.post('/banners', payload);
+        toast.success('Banner criado!');
+      }
+      clearBannerForm();
+      loadBanners();
+    } catch (err) {
+      const msg = err.response?.data;
+      toast.error(typeof msg === 'string' ? msg : 'Erro ao salvar banner.');
+    }
+  };
+
+  const handleEditBanner = (b) => {
+    setBannerEditId(b.id);
+    setBannerImagem(b.urlImagem || '');
+    setBannerTitulo(b.titulo || '');
+    setBannerSubtitulo(b.subtitulo || '');
+    setBannerBadge(b.badge || '');
+    setBannerTextoBotao(b.textoBotao || '');
+    setBannerLink(b.link || '');
+    setBannerOrdem(b.ordem || 0);
+    setBannerAtivo(b.ativo);
+  };
+
+  const handleDeleteBanner = async (id) => {
+    if (!window.confirm('Remover este banner?')) return;
+    try {
+      await api.delete(`/banners/${id}`);
+      toast.success('Banner removido!');
+      loadBanners();
+    } catch { toast.error('Erro ao remover banner.'); }
   };
 
   const handleCriarCupom = async (e) => {
@@ -309,6 +394,7 @@ const AdminDashboard = () => {
           <button onClick={() => setActiveTab('PRODUCTS')} className={`admin-tab ${activeTab === 'PRODUCTS' ? 'active' : ''}`}>Produtos</button>
           <button onClick={() => setActiveTab('CUPONS')} className={`admin-tab ${activeTab === 'CUPONS' ? 'active' : ''}`}>Cupons</button>
           <button onClick={() => setActiveTab('CATEGORIAS')} className={`admin-tab ${activeTab === 'CATEGORIAS' ? 'active' : ''}`}>Categorias</button>
+          <button onClick={() => setActiveTab('BANNERS')} className={`admin-tab ${activeTab === 'BANNERS' ? 'active' : ''}`}>Banners</button>
         </nav>
       </aside>
 
@@ -428,6 +514,7 @@ const AdminDashboard = () => {
               <table className="admin-table">
                 <thead>
                   <tr>
+                    <th>Código</th>
                     <th>Produto</th>
                     <th>Cat/Preço</th>
                     <th>Estoque</th>
@@ -437,6 +524,7 @@ const AdminDashboard = () => {
                 <tbody>
                   {products.filter(p => p.nome?.toLowerCase().includes(searchProduct.toLowerCase())).map(p => (
                     <tr key={p.id}>
+                      <td className="admin-product-code">{p.codigo || '—'}</td>
                       <td>
                         <div className="admin-product-name-cell">
                           <img src={p.urlImagem} alt="" className="admin-product-img" loading="lazy" />
@@ -598,6 +686,81 @@ const AdminDashboard = () => {
                 </div>
               ))}
               {categorias.length === 0 && <p className="admin-table-empty">Nenhuma categoria cadastrada.</p>}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'BANNERS' && (
+          <div>
+            <h2 className="admin-section-title">Banners da Home</h2>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              Os banners aparecem como carrossel na página inicial. Use imagens de alta qualidade (1920x800px recomendado).
+            </p>
+
+            <form onSubmit={handleSalvarBanner} className="admin-banner-form" style={{ marginBottom: '2rem' }}>
+              <div className="admin-banner-form-grid">
+                <div className="admin-form-section">
+                  <span className="admin-form-label">Imagem (lado direito)</span>
+                  <div className="admin-cat-img-area">
+                    {bannerImagem ? (
+                      <div className="admin-cat-img-preview" style={{ width: '100%', height: '150px' }}>
+                        <img src={bannerImagem} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
+                        <button type="button" onClick={() => setBannerImagem('')} className="admin-cat-img-remove">&times;</button>
+                      </div>
+                    ) : (
+                      <label className="admin-cat-upload-label">
+                        <input type="file" accept="image/*" onChange={handleBannerImageUpload} className="admin-upload-input" disabled={bannerUploading} />
+                        <span className="admin-cat-upload-text">{bannerUploading ? 'Enviando...' : 'Enviar foto'}</span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="admin-form-section">
+                  <span className="admin-form-label">Textos (lado esquerdo)</span>
+                  <input type="text" placeholder="Badge (ex: Nova Coleção 2026)" value={bannerBadge} onChange={e => setBannerBadge(e.target.value)} className="admin-input" />
+                  <input type="text" placeholder="Título principal" value={bannerTitulo} onChange={e => setBannerTitulo(e.target.value)} className="admin-input" />
+                  <input type="text" placeholder="Subtítulo / descrição" value={bannerSubtitulo} onChange={e => setBannerSubtitulo(e.target.value)} className="admin-input" />
+                  <input type="text" placeholder="Texto do botão (ex: Ver Coleção)" value={bannerTextoBotao} onChange={e => setBannerTextoBotao(e.target.value)} className="admin-input" />
+                  <select value={bannerLink} onChange={e => setBannerLink(e.target.value)} className="admin-input">
+                    <option value="">Botão leva para → Todas as categorias</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={`/catalogo?categoria=${cat.nome}`}>{cat.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="admin-form-section">
+                  <span className="admin-form-label">Configurações</span>
+                  <input type="number" placeholder="Ordem" value={bannerOrdem} onChange={e => setBannerOrdem(Number(e.target.value))} className="admin-input" style={{ width: '100px' }} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={bannerAtivo} onChange={e => setBannerAtivo(e.target.checked)} />
+                    Ativo
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="submit" className="btn-primary">{bannerEditId ? 'Salvar' : 'Criar Banner'}</button>
+                {bannerEditId && <button type="button" onClick={clearBannerForm} className="admin-cancel-btn">Cancelar</button>}
+              </div>
+            </form>
+
+            <div className="admin-cat-grid">
+              {bannersList.map(b => (
+                <div key={b.id} className="admin-cat-card" style={{ opacity: b.ativo ? 1 : 0.5 }}>
+                  <img src={b.urlImagem} alt="Banner" className="admin-cat-card-img" style={{ height: '120px', objectFit: 'cover' }} />
+                  <div className="admin-cat-card-info">
+                    <span className="admin-cat-card-name">{b.titulo || 'Sem título'}</span>
+                    <span className="admin-cat-card-order">{b.badge || ''} | Ordem: {b.ordem} | {b.ativo ? 'Ativo' : 'Inativo'}</span>
+                  </div>
+                  <div className="admin-cat-card-actions">
+                    <button onClick={() => handleEditBanner(b)} className="admin-edit-btn">Editar</button>
+                    <button onClick={() => handleDeleteBanner(b.id)} className="admin-delete-btn">Remover</button>
+                  </div>
+                </div>
+              ))}
+              {bannersList.length === 0 && <p className="admin-table-empty">Nenhum banner cadastrado. A home mostrará o hero padrão.</p>}
             </div>
           </div>
         )}

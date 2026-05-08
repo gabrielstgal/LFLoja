@@ -8,7 +8,7 @@ import './SideCart.css';
 const SideCart = () => {
   const {
     cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, clearCart,
-    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom, getPrecoEfetivo
+    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom, getPrecoEfetivo, updateSize
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -73,10 +73,18 @@ const SideCart = () => {
                 <img src={item.image || item.urlImagem} alt={item.nome} className="item-image" loading="lazy" />
                 <div className="item-details">
                   <h4 className="item-name">{item.nome}</h4>
-                  {item.selectedSize ? (
-                    <span className="item-size">Tam: {item.selectedSize}</span>
-                  ) : item.tamanhos && item.tamanhos.length > 0 ? (
-                    <span className="item-size-missing">Tamanho não selecionado</span>
+                  {item.tamanhos && item.tamanhos.length > 0 ? (
+                    <div className="item-size-selector">
+                      {item.tamanhos.map(size => (
+                        <button
+                          key={size}
+                          className={`item-size-btn ${item.selectedSize === size ? 'item-size-btn-active' : ''}`}
+                          onClick={() => updateSize(item.cartId, size)}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
                   {item.precoPromocional && item.precoPromocional < item.preco ? (
                     <p className="item-price">

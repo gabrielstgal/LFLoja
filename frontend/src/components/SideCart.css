@@ -96,6 +96,36 @@
   margin-bottom: 0.25rem;
 }
 
+.item-size-selector {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.item-size-btn {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: all 0.15s;
+}
+
+.item-size-btn:hover {
+  border-color: var(--color-text);
+  color: var(--color-text);
+}
+
+.item-size-btn-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+}
+
 .item-size-missing {
   font-size: 0.8rem;
   color: #f44336;

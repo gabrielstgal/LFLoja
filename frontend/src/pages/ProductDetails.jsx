@@ -52,7 +52,7 @@ const ProductDetails = () => {
         setProduct(res.data);
         setSelectedImage(res.data.urlImagem || '');
       })
-      .catch(() => {})
+      .catch(() => toast.error('Erro ao carregar produto. Verifique sua conexão.'))
       .finally(() => setLoading(false));
 
     carregarAvaliacoes();
@@ -94,7 +94,7 @@ const ProductDetails = () => {
 
   const handleAddToCart = () => {
     if (product.tamanhos && product.tamanhos.length > 0 && !selectedSize) {
-      alert('Por favor, selecione um tamanho antes de adicionar ao carrinho.');
+      toast.error('Selecione um tamanho antes de adicionar ao carrinho.');
       return;
     }
     addToCart({ ...product, selectedSize: selectedSize || null });
@@ -167,7 +167,7 @@ const ProductDetails = () => {
                   onClick={() => qty > 0 && setSelectedSize(size)}
                   className={`size-btn ${selectedSize === size ? 'selected' : ''} ${qty <= 0 ? 'size-btn-disabled' : ''}`}
                   disabled={qty <= 0}
-                  title={qty > 0 ? `${qty} disponíveis` : 'Esgotado'}
+                  title={qty <= 0 ? 'Esgotado' : ''}
                 >
                   {size}
                 </button>
@@ -183,9 +183,9 @@ const ProductDetails = () => {
         }`}>
           {selectedSize
             ? (product.estoqueTamanhos?.[selectedSize] > 0
-                ? `${product.estoqueTamanhos[selectedSize]} em estoque (${selectedSize})`
+                ? 'Disponível'
                 : 'Esgotado neste tamanho')
-            : (product.quantidadeEstoque > 0 ? `${product.quantidadeEstoque} em estoque` : 'Esgotado')
+            : (product.quantidadeEstoque > 0 ? 'Disponível' : 'Esgotado')
           }
         </p>
 

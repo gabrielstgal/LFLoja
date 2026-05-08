@@ -1,5 +1,5 @@
 .hero-section {
-  min-height: 85vh;
+  min-height: 30vh;
   display: flex;
   overflow: hidden;
 }
@@ -9,7 +9,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 4rem 5%;
+  padding: 1rem 5%;
   background-color: #0a0a0a;
   color: #ffffff;
   position: relative;
@@ -19,19 +19,19 @@
 .hero-badge {
   display: inline-block;
   width: fit-content;
-  padding: 0.4rem 1.2rem;
+  padding: 0.3rem 1rem;
   border: 1px solid rgba(255,255,255,0.2);
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.6);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .hero-title {
-  font-size: 4rem;
-  margin-bottom: 1.25rem;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
   line-height: 1.05;
   font-weight: 700;
   letter-spacing: -1px;
@@ -42,18 +42,18 @@
 }
 
 .hero-subtitle {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: rgba(255,255,255,0.55);
-  margin-bottom: 2.5rem;
-  line-height: 1.7;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
   max-width: 440px;
 }
 
 .hero-cta {
   display: inline-block;
   width: fit-content;
-  padding: 1.1rem 3rem;
-  font-size: 1rem;
+  padding: 0.8rem 2.5rem;
+  font-size: 0.9rem;
   border-radius: 50px;
   box-shadow: 0 4px 24px rgba(230, 57, 70, 0.35);
 }
@@ -103,6 +103,82 @@
 @keyframes scrollPulse {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
+}
+
+/* Banner Carousel */
+.hero-banner-carousel {
+  position: relative;
+  width: 100%;
+}
+
+.hero-banner-slide {
+  display: flex;
+  min-height: 30vh;
+  animation: bannerFadeIn 0.5s ease;
+}
+
+@keyframes bannerFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.hero-banner-dots {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  z-index: 2;
+}
+
+.hero-banner-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.7);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.hero-banner-dot.active {
+  background: white;
+  border-color: white;
+}
+
+@media (max-width: 768px) {
+  .hero-banner-slide {
+    flex-direction: column-reverse;
+    min-height: auto;
+  }
+
+  .hero-banner-slide .hero-left {
+    padding: 1.5rem 5%;
+    text-align: center;
+    align-items: center;
+  }
+
+  .hero-banner-slide .hero-right {
+    height: 35vh;
+    width: 100%;
+  }
+
+  .hero-banner-slide .hero-title { font-size: 1.8rem; }
+  .hero-banner-slide .hero-subtitle { font-size: 0.85rem; max-width: 100%; }
+  .hero-banner-slide .hero-badge { font-size: 0.65rem; margin-bottom: 0.5rem; }
+  .hero-banner-slide .hero-cta { padding: 0.7rem 2rem; font-size: 0.85rem; }
+
+  .hero-banner-dots { bottom: 0.75rem; }
+  .hero-banner-dot { width: 8px; height: 8px; }
+}
+
+@media (max-width: 480px) {
+  .hero-banner-slide .hero-right { height: 28vh; }
+  .hero-banner-slide .hero-title { font-size: 1.5rem; }
+  .hero-banner-slide .hero-subtitle { font-size: 0.8rem; margin-bottom: 0.5rem; }
+  .hero-banner-slide .hero-left { padding: 1rem 5%; }
 }
 
 /* Benefits bar */
@@ -292,11 +368,11 @@
 }
 
 @media (max-width: 768px) {
-  .hero-section { flex-direction: column; min-height: auto; }
-  .hero-left { padding: 3rem 5%; }
-  .hero-title { font-size: 2.5rem; }
-  .hero-subtitle { font-size: 1rem; }
-  .hero-right { height: 50vh; }
+  .hero-section { flex-direction: column-reverse; min-height: auto; }
+  .hero-section .hero-left { padding: 1.5rem 5%; text-align: center; align-items: center; }
+  .hero-section .hero-title { font-size: 1.8rem; }
+  .hero-section .hero-subtitle { font-size: 0.85rem; max-width: 100%; }
+  .hero-section .hero-right { height: 35vh; }
   .hero-scroll-hint { display: none; }
 
   .benefits-bar { gap: 1.5rem; padding: 1.5rem 5%; }
@@ -313,11 +389,11 @@
 }
 
 @media (max-width: 480px) {
-  .hero-left { padding: 2.5rem 5%; }
-  .hero-title { font-size: 2rem; }
-  .hero-badge { font-size: 0.7rem; padding: 0.3rem 0.9rem; }
-  .hero-cta { padding: 0.9rem 2rem; font-size: 0.9rem; }
-  .hero-right { height: 40vh; }
+  .hero-section .hero-left { padding: 1rem 5%; }
+  .hero-section .hero-title { font-size: 1.5rem; }
+  .hero-section .hero-badge { font-size: 0.65rem; }
+  .hero-section .hero-cta { padding: 0.7rem 2rem; font-size: 0.85rem; }
+  .hero-section .hero-right { height: 28vh; }
 
   .categories-title { font-size: 1.4rem; }
   .category-card-label { font-size: 0.9rem; }

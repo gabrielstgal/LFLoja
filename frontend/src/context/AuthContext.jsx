@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
     const handleForceLogout = () => {
       setUser(null);
       if (window.location.pathname !== '/auth') {
+        localStorage.setItem('lf-session-expired', '1');
         window.location.href = '/auth';
       }
     };
@@ -68,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const isAdmin = user?.papeis?.includes('ROLE_ADMIN');
+  const isAdmin = Array.isArray(user?.papeis) && user.papeis.includes('ROLE_ADMIN');
 
   if (loading) {
     return <Loading texto="" />;

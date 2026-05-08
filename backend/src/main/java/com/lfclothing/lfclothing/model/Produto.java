@@ -13,6 +13,9 @@ public class Produto {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, updatable = false)
+    private String codigo;
+
     @Column(nullable = false)
     private String nome;
 
@@ -56,6 +59,14 @@ public class Produto {
         this.quantidadeEstoque = quantidadeEstoque;
     }
 
+    @PrePersist
+    private void gerarCodigo() {
+        if (this.codigo == null) {
+            String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+            this.codigo = "LF-" + uuid;
+        }
+    }
+
     @JsonProperty("tamanhos")
     public List<String> getTamanhos() {
         return new ArrayList<>(estoqueTamanhos.keySet());
@@ -67,6 +78,9 @@ public class Produto {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
 
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }

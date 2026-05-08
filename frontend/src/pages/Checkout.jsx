@@ -78,7 +78,8 @@ const Checkout = () => {
       msg += `\nCupom: *${cupomAplicado}* (-R$ ${desconto.toFixed(2)})`;
     }
     msg += `\n*Total: R$ ${cartTotal.toFixed(2)}*`;
-    msg += `\n*Pagamento:* ${paymentMethod === 'PIX' ? 'Pix' : 'Cartão de Crédito'}`;
+    const nomesPagamento = { PIX: 'Pix', DEBITO: 'Cartão de Débito', CREDITO: 'Cartão de Crédito' };
+    msg += `\n*Pagamento:* ${nomesPagamento[paymentMethod]}`;
     if (paymentMethod === 'CREDITO' && parcelas > 1) {
       msg += ` (${parcelas}x de R$ ${(cartTotal / parcelas).toFixed(2)})`;
     }
@@ -91,6 +92,10 @@ const Checkout = () => {
   const handleFinalize = async (e) => {
     e.preventDefault();
     if (cartItems.length === 0) { toast.error('Carrinho vazio!'); return; }
+    if (!address.cep.trim() || !address.rua.trim() || !address.numero.trim() || !address.bairro.trim() || !address.cidade.trim() || !address.estado.trim()) {
+      toast.error('Preencha todos os campos obrigatórios do endereço.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -111,7 +116,10 @@ const Checkout = () => {
       const whatsappUrl = `https://wa.me/${telefoneLoja}?text=${mensagem}`;
 
       clearCart();
-      window.open(whatsappUrl, '_blank');
+      const whatsappWindow = window.open(whatsappUrl, '_blank');
+      if (!whatsappWindow) {
+        toast.info('O WhatsApp pode ter sido bloqueado pelo navegador. Copie o protocolo: ' + protocolo);
+      }
       navigate('/pedido/enviado');
     } catch (err) {
       const msg = err.response?.data;
@@ -216,6 +224,17 @@ const Checkout = () => {
                 <path d="M11.354 2.646a.9.9 0 0 1 1.274 0l2.196 2.196a.9.9 0 0 0 .638.264h2.788a.9.9 0 0 1 .9.9v2.788a.9.9 0 0 0 .264.638l2.196 2.196a.9.9 0 0 1 0 1.274l-2.196 2.196a.9.9 0 0 0-.264.638v2.788a.9.9 0 0 1-.9.9h-2.788a.9.9 0 0 0-.638.264l-2.196 2.196a.9.9 0 0 1-1.274 0l-2.196-2.196a.9.9 0 0 0-.638-.264H5.732a.9.9 0 0 1-.9-.9v-2.788a.9.9 0 0 0-.264-.638L2.372 12.9a.9.9 0 0 1 0-1.274l2.196-2.196a.9.9 0 0 0 .264-.638V5.006a.9.9 0 0 1 .9-.9h2.788a.9.9 0 0 0 .638-.264z"/>
               </svg>
               Pix
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPaymentMethod('DEBITO'); setParcelas(1); }}
+              className={`checkout-payment-btn ${paymentMethod === 'DEBITO' ? 'selected debito' : ''}`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                <line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+              Débito
             </button>
             <button
               type="button"

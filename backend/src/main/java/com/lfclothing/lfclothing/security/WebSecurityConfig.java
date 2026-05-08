@@ -78,6 +78,7 @@ public class WebSecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/cupons/validar").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/avaliacoes/produto/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/categorias").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/banners").permitAll()
                     .anyRequest().authenticated()
             );
 

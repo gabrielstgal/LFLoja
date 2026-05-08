@@ -30,7 +30,7 @@ public class ProdutoController {
     }
 
     private static final Set<String> TIPOS_IMAGEM_PERMITIDOS = Set.of(
-            "image/jpeg", "image/png", "image/webp", "image/gif"
+            "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"
     );
 
     @PreAuthorize("hasRole('ADMIN')")

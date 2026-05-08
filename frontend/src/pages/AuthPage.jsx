@@ -32,8 +32,28 @@ const AuthPage = () => {
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useState(() => {
+    if (localStorage.getItem('lf-session-expired')) {
+      localStorage.removeItem('lf-session-expired');
+      toast.info('Sua sessão expirou. Faça login novamente.');
+    }
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim() || !senha.trim()) {
+      toast.error('Preencha todos os campos.');
+      return;
+    }
+    if (!isLogin && !nome.trim()) {
+      toast.error('Digite seu nome.');
+      return;
+    }
+    if (senha.length < 8) {
+      toast.error('A senha deve ter no mínimo 8 caracteres.');
+      return;
+    }
+
     setLoading(true);
     try {
       if (isLogin) {
@@ -46,7 +66,14 @@ const AuthPage = () => {
         setIsLogin(true);
       }
     } catch (err) {
-      toast.error(typeof err === 'string' ? err : err?.erro || "Falha na requisição.");
+      const msg = typeof err === 'string' ? err : err?.erro;
+      if (msg?.includes('Email ja esta em uso')) {
+        toast.error('Este e-mail já está cadastrado. Tente fazer login.');
+      } else if (msg?.includes('Bad credentials') || msg?.includes('401')) {
+        toast.error('E-mail ou senha incorretos.');
+      } else {
+        toast.error(msg || 'Erro de conexão. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

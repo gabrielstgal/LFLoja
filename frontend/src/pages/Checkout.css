@@ -143,6 +143,12 @@
   color: #32BCAD;
 }
 
+.checkout-payment-btn.selected.debito {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+}
+
 .checkout-payment-btn.selected.credito {
   border-color: #6366f1;
   background: rgba(99, 102, 241, 0.08);
