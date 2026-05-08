@@ -162,7 +162,7 @@ const Catalog = () => {
 
       <div className="catalog-main">
         <div className="catalog-header">
-          <h2>Catálogo ({totalElements})</h2>
+          <h2>Categorias ({totalElements})</h2>
           <form onSubmit={handleSearch} className="catalog-search-form-inline">
             <input
               type="text"
