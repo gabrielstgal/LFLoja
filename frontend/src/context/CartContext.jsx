@@ -64,7 +64,11 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(key, JSON.stringify(cartItems));
   }, [cartItems, user]);
 
-  const cartSubtotal = cartItems.reduce((total, item) => total + item.preco * item.quantity, 0);
+  const getPrecoEfetivo = (item) => {
+    return (item.precoPromocional && item.precoPromocional < item.preco) ? item.precoPromocional : item.preco;
+  };
+
+  const cartSubtotal = cartItems.reduce((total, item) => total + getPrecoEfetivo(item) * item.quantity, 0);
 
   useEffect(() => {
     if (!cupomDados) {
@@ -136,9 +140,9 @@ export const CartProvider = ({ children }) => {
   return (
     <CartContext.Provider value={{
       cartItems, addToCart, removeFromCart, updateQuantity, clearCart,
-      cartSubtotal, cartTotal, cartCount,
+      cartSubtotal, cartTotal, cartCount, getPrecoEfetivo,
       isCartOpen, setIsCartOpen,
-      cupomAplicado, desconto, aplicarCupom, removerCupom
+      cupomAplicado, cupomDados, desconto, aplicarCupom, removerCupom
     }}>
       {children}
     </CartContext.Provider>

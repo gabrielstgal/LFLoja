@@ -33,6 +33,9 @@ public class JwtUtils {
     @Value("${jwt.cookie-secure:false}")
     private boolean cookieSecure;
 
+    @Value("${jwt.cookie-domain:}")
+    private String cookieDomain;
+
     private Key key() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
@@ -94,6 +97,9 @@ public class JwtUtils {
         cookie.setPath("/");
         cookie.setMaxAge(maxAgeSec);
         cookie.setAttribute("SameSite", "Lax");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         response.addCookie(cookie);
     }
 
@@ -104,6 +110,9 @@ public class JwtUtils {
         cookie.setPath("/");
         cookie.setMaxAge(0);
         cookie.setAttribute("SameSite", "Lax");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         response.addCookie(cookie);
     }
 

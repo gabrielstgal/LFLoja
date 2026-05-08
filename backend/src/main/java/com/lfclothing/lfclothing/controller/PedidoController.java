@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @RestController
@@ -26,12 +27,14 @@ public class PedidoController {
     private final ProdutoRepository produtoRepository;
     private final UsuarioRepository usuarioRepository;
     private final EnderecoRepository enderecoRepository;
+    private final com.lfclothing.lfclothing.repository.CupomRepository cupomRepository;
 
-    public PedidoController(PedidoRepository pedidoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, EnderecoRepository enderecoRepository) {
+    public PedidoController(PedidoRepository pedidoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, EnderecoRepository enderecoRepository, com.lfclothing.lfclothing.repository.CupomRepository cupomRepository) {
         this.pedidoRepository = pedidoRepository;
         this.produtoRepository = produtoRepository;
         this.usuarioRepository = usuarioRepository;
         this.enderecoRepository = enderecoRepository;
+        this.cupomRepository = cupomRepository;
     }
 
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
@@ -54,14 +57,33 @@ public class PedidoController {
             Produto produto = produtoRepository.findById(itemReq.produtoId())
                     .orElseThrow(() -> new RuntimeException("Produto nao encontrado: " + itemReq.produtoId()));
 
-            ItemPedido itemPedido = new ItemPedido(pedido, produto, itemReq.quantidade(), produto.getPreco(), itemReq.tamanho());
+            BigDecimal precoUnitario = (produto.getPrecoPromocional() != null && produto.getPrecoPromocional().compareTo(produto.getPreco()) < 0)
+                    ? produto.getPrecoPromocional() : produto.getPreco();
+
+            ItemPedido itemPedido = new ItemPedido(pedido, produto, itemReq.quantidade(), precoUnitario, itemReq.tamanho());
             pedido.adicionarItem(itemPedido);
 
-            BigDecimal itemTotal = produto.getPreco().multiply(BigDecimal.valueOf(itemReq.quantidade()));
+            BigDecimal itemTotal = precoUnitario.multiply(BigDecimal.valueOf(itemReq.quantidade()));
             total = total.add(itemTotal);
         }
 
-        pedido.setValorTotal(total);
+        // Aplicar cupom se fornecido
+        BigDecimal valorDesconto = BigDecimal.ZERO;
+        if (requisicao.cupom() != null && !requisicao.cupom().isBlank()) {
+            var cupomOpt = cupomRepository.findByCodigoAndAtivoTrue(requisicao.cupom().toUpperCase().trim());
+            if (cupomOpt.isPresent()) {
+                Cupom cupom = cupomOpt.get();
+                if (cupom.getTipo() == TipoCupom.PERCENTUAL) {
+                    valorDesconto = total.multiply(cupom.getValor()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                } else {
+                    valorDesconto = cupom.getValor().min(total);
+                }
+                pedido.setCupomCodigo(cupom.getCodigo());
+                pedido.setValorDesconto(valorDesconto);
+            }
+        }
+
+        pedido.setValorTotal(total.subtract(valorDesconto).max(BigDecimal.ZERO));
         pedidoRepository.saveAndFlush(pedido);
 
         return ResponseEntity.ok(java.util.Map.of(

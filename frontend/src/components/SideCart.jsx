@@ -8,7 +8,7 @@ import './SideCart.css';
 const SideCart = () => {
   const {
     cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, clearCart,
-    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom
+    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom, getPrecoEfetivo
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -78,7 +78,14 @@ const SideCart = () => {
                   ) : item.tamanhos && item.tamanhos.length > 0 ? (
                     <span className="item-size-missing">Tamanho não selecionado</span>
                   ) : null}
-                  <p className="item-price">R$ {item.preco.toFixed(2)}</p>
+                  {item.precoPromocional && item.precoPromocional < item.preco ? (
+                    <p className="item-price">
+                      <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.85em', marginRight: '6px' }}>R$ {item.preco.toFixed(2)}</span>
+                      <span style={{ color: 'var(--color-primary)' }}>R$ {item.precoPromocional.toFixed(2)}</span>
+                    </p>
+                  ) : (
+                    <p className="item-price">R$ {item.preco.toFixed(2)}</p>
+                  )}
                   <div className="item-actions">
                     <div className="quantity-controls">
                       <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)}>-</button>

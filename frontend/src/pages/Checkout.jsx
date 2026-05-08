@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import './Checkout.css';
 
 const Checkout = () => {
-  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado, clearCart } = useCart();
+  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado, cupomDados, clearCart, getPrecoEfetivo } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -100,6 +100,7 @@ const Checkout = () => {
           quantidade: item.quantity,
           tamanho: item.selectedSize || null,
         })),
+        cupom: cupomAplicado || null,
         ...address,
       };
 
@@ -146,7 +147,16 @@ const Checkout = () => {
                     </span>
                   </div>
                 </div>
-                <div className="checkout-item-price">R$ {(item.preco * item.quantity).toFixed(2)}</div>
+                <div className="checkout-item-price">
+                  {item.precoPromocional && item.precoPromocional < item.preco ? (
+                    <>
+                      <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.85em', display: 'block' }}>R$ {(item.preco * item.quantity).toFixed(2)}</span>
+                      <span>R$ {(item.precoPromocional * item.quantity).toFixed(2)}</span>
+                    </>
+                  ) : (
+                    `R$ ${(item.preco * item.quantity).toFixed(2)}`
+                  )}
+                </div>
               </div>
             ))}
           </div>

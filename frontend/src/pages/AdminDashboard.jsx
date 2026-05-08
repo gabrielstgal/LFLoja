@@ -367,7 +367,14 @@ const AdminDashboard = () => {
                         <div className="admin-client-email">{o.usuario.email}</div>
                       </td>
                       <td>{new Date(o.dataCriacao).toLocaleDateString()}</td>
-                      <td className="admin-order-value">R$ {o.valorTotal.toFixed(2)}</td>
+                      <td className="admin-order-value">
+                        R$ {o.valorTotal.toFixed(2)}
+                        {o.cupomCodigo && (
+                          <div style={{ fontSize: '0.75em', color: '#888' }}>
+                            Cupom: {o.cupomCodigo} (-R$ {(o.valorDesconto || 0).toFixed(2)})
+                          </div>
+                        )}
+                      </td>
                       <td><span className={`admin-status-badge ${getStatusClass(o.status)}`}>{o.status}</span></td>
                       <td>
                         <div className="admin-order-actions">

@@ -33,6 +33,12 @@ public class Pedido {
     @Column(nullable = false)
     private StatusPedido status = StatusPedido.PENDENTE;
 
+    @Column(name = "cupom_codigo")
+    private String cupomCodigo;
+
+    @Column(name = "valor_desconto")
+    private BigDecimal valorDesconto;
+
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
@@ -89,4 +95,10 @@ public class Pedido {
 
     public Endereco getEnderecoEntrega() { return enderecoEntrega; }
     public void setEnderecoEntrega(Endereco enderecoEntrega) { this.enderecoEntrega = enderecoEntrega; }
+
+    public String getCupomCodigo() { return cupomCodigo; }
+    public void setCupomCodigo(String cupomCodigo) { this.cupomCodigo = cupomCodigo; }
+
+    public BigDecimal getValorDesconto() { return valorDesconto; }
+    public void setValorDesconto(BigDecimal valorDesconto) { this.valorDesconto = valorDesconto; }
 }
