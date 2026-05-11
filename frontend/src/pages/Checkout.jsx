@@ -113,7 +113,9 @@ const Checkout = () => {
       const protocolo = response.data.protocolo;
 
       const mensagem = buildWhatsAppMessage(protocolo);
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${telefoneLoja}&text=${mensagem}`;
+      const fone = telefoneLoja.replace(/\D/g, '').replace(/^0+/, '');
+      const foneCompleto = fone.startsWith('55') ? fone : `55${fone}`;
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${foneCompleto}&text=${mensagem}`;
 
       clearCart();
       navigate('/pedido/enviado');

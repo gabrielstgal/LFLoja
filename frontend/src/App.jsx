@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -16,6 +16,10 @@ import OrderSent from './pages/OrderSent';
 function App() {
   const location = useLocation();
   const hideLayout = location.pathname === '/auth';
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <div className="app-container">
