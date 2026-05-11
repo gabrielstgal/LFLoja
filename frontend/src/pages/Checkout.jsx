@@ -113,14 +113,13 @@ const Checkout = () => {
       const protocolo = response.data.protocolo;
 
       const mensagem = buildWhatsAppMessage(protocolo);
-      const whatsappUrl = `https://wa.me/${telefoneLoja}?text=${mensagem}`;
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${telefoneLoja}&text=${mensagem}`;
 
       clearCart();
-      const whatsappWindow = window.open(whatsappUrl, '_blank');
-      if (!whatsappWindow) {
-        toast.info('O WhatsApp pode ter sido bloqueado pelo navegador. Copie o protocolo: ' + protocolo);
-      }
       navigate('/pedido/enviado');
+
+      // Usar location.href para redirecionar — window.open é bloqueado como popup no mobile (especialmente iPhone)
+      window.location.href = whatsappUrl;
     } catch (err) {
       const msg = err.response?.data;
       toast.error(typeof msg === 'string' ? msg : msg?.erro || 'Erro ao registrar pedido. Tente novamente.');
