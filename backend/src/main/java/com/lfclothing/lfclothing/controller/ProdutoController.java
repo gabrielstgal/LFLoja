@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -115,9 +117,14 @@ public class ProdutoController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public Produto criarProduto(@RequestBody Produto produto) {
+    public ResponseEntity<?> criarProduto(@RequestBody Produto produto) {
+        produto.setNome(InputSanitizer.sanitizeText(produto.getNome()));
+        produto.setDescricao(InputSanitizer.sanitizeHtml(produto.getDescricao()));
+        if (!InputSanitizer.isValidUrl(produto.getUrlImagem())) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "URL da imagem invalida."));
+        }
         produto.recalcularEstoqueTotal();
-        return produtoRepository.save(produto);
+        return ResponseEntity.ok(produtoRepository.save(produto));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

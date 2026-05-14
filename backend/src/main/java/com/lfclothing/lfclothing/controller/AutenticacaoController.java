@@ -21,6 +21,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/autenticacao")
 public class AutenticacaoController {
+
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AutenticacaoController.class);
 
     private final AuthenticationManager authenticationManager;
     private final UsuarioRepository usuarioRepository;
@@ -118,19 +122,23 @@ public class AutenticacaoController {
             return ResponseEntity.status(404).body("Usuário não encontrado.");
         }
 
-        String nome = dados.get("nome");
-        if (nome != null && !nome.trim().isEmpty()) {
-            usuario.setNome(nome.trim());
+        String nome = InputSanitizer.sanitizeText(dados.get("nome"));
+        if (nome != null && !nome.isBlank()) {
+            usuario.setNome(nome);
         }
 
         String senhaAtual = dados.get("senhaAtual");
         String novaSenha = dados.get("novaSenha");
         if (senhaAtual != null && novaSenha != null && !senhaAtual.isEmpty() && !novaSenha.isEmpty()) {
             if (!encoder.matches(senhaAtual, usuario.getSenha())) {
+                logger.warn("Tentativa de troca de senha com senha incorreta para usuario: {}", usuario.getEmail());
                 return ResponseEntity.badRequest().body("Senha atual incorreta.");
             }
             if (novaSenha.length() < 8) {
                 return ResponseEntity.badRequest().body("A nova senha deve ter no mínimo 8 caracteres.");
+            }
+            if (novaSenha.length() > 100) {
+                return ResponseEntity.badRequest().body("Senha muito longa.");
             }
             usuario.setSenha(encoder.encode(novaSenha));
         }
@@ -141,16 +149,24 @@ public class AutenticacaoController {
 
     @PostMapping("/registrar")
     public ResponseEntity<?> registrarUsuario(@Valid @RequestBody CadastroRequisicao cadastroRequisicao) {
-        if (usuarioRepository.existsByEmail(cadastroRequisicao.email())) {
-            return ResponseEntity.badRequest().body("Erro: Email ja esta em uso!");
+        String nomeSanitizado = InputSanitizer.sanitizeText(cadastroRequisicao.nome());
+        if (nomeSanitizado == null || nomeSanitizado.isBlank()) {
+            return ResponseEntity.badRequest().body("Nome invalido.");
         }
 
-        Usuario usuario = new Usuario(cadastroRequisicao.nome(), cadastroRequisicao.email(),
+        // Resposta genérica para não revelar se o email já existe (anti-enumeração)
+        if (usuarioRepository.existsByEmail(cadastroRequisicao.email())) {
+            // Simula tempo de processamento do bcrypt para não revelar via timing
+            encoder.encode("dummy-timing-equalization");
+            return ResponseEntity.ok("Se este email nao estiver cadastrado, sua conta foi criada. Tente fazer login.");
+        }
+
+        Usuario usuario = new Usuario(nomeSanitizado, cadastroRequisicao.email(),
                 encoder.encode(cadastroRequisicao.senha()), Role.ROLE_USER);
 
         usuarioRepository.save(usuario);
 
-        return ResponseEntity.ok("Usuario registrado com sucesso!");
+        return ResponseEntity.ok("Se este email nao estiver cadastrado, sua conta foi criada. Tente fazer login.");
     }
 
     @PreAuthorize("hasRole('ADMIN')")

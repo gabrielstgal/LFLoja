@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -32,12 +32,12 @@ const AuthPage = () => {
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     if (localStorage.getItem('lf-session-expired')) {
       localStorage.removeItem('lf-session-expired');
       toast.info('Sua sessão expirou. Faça login novamente.');
     }
-  });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,14 +62,12 @@ const AuthPage = () => {
         navigate('/cliente');
       } else {
         await register(nome, email, senha);
-        toast.success("Conta criada! Você já pode fazer login.");
+        toast.success("Cadastro processado! Tente fazer login.");
         setIsLogin(true);
       }
     } catch (err) {
       const msg = typeof err === 'string' ? err : err?.erro;
-      if (msg?.includes('Email ja esta em uso')) {
-        toast.error('Este e-mail já está cadastrado. Tente fazer login.');
-      } else if (msg?.includes('Bad credentials') || msg?.includes('401')) {
+      if (msg?.includes('Bad credentials') || msg?.includes('401')) {
         toast.error('E-mail ou senha incorretos.');
       } else {
         toast.error(msg || 'Erro de conexão. Tente novamente.');

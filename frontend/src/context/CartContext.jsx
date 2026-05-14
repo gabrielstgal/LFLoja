@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
+import { validarCupom } from '../services/cupomService';
+import { getPrecoEfetivo } from '../utils/productUtils';
 
 const CartContext = createContext();
 
@@ -64,10 +65,6 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(key, JSON.stringify(cartItems));
   }, [cartItems, user]);
 
-  const getPrecoEfetivo = (item) => {
-    return (item.precoPromocional && item.precoPromocional < item.preco) ? item.precoPromocional : item.preco;
-  };
-
   const cartSubtotal = cartItems.reduce((total, item) => total + getPrecoEfetivo(item) * item.quantity, 0);
 
   useEffect(() => {
@@ -91,8 +88,8 @@ export const CartProvider = ({ children }) => {
     if (cupomAplicado === codigoTrimmed.toUpperCase()) return { ok: false, msg: 'Este cupom já está aplicado.' };
 
     try {
-      const res = await api.post('/cupons/validar', { codigo: codigoTrimmed });
-      const { codigo: cod, tipo, valor } = res.data;
+      const data = await validarCupom(codigoTrimmed);
+      const { codigo: cod, tipo, valor } = data;
       setCupomAplicado(cod);
       setCupomDados({ tipo, valor: Number(valor) });
       const desc = tipo === 'PERCENTUAL' ? `${valor}%` : `R$ ${Number(valor).toFixed(2)}`;
@@ -155,7 +152,7 @@ export const CartProvider = ({ children }) => {
   return (
     <CartContext.Provider value={{
       cartItems, addToCart, removeFromCart, updateQuantity, updateSize, clearCart,
-      cartSubtotal, cartTotal, cartCount, getPrecoEfetivo,
+      cartSubtotal, cartTotal, cartCount,
       isCartOpen, setIsCartOpen,
       cupomAplicado, cupomDados, desconto, aplicarCupom, removerCupom
     }}>

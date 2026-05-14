@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import api from '../services/api';
 import { toast } from 'react-toastify';
+import { checkout as submitCheckout } from '../services/pedidoService';
+import { getLojaConfig } from '../services/lojaService';
+import useCepLookup from '../hooks/useCepLookup';
+import { hasPromo } from '../utils/productUtils';
 import './Checkout.css';
 
 const Checkout = () => {
-  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado, cupomDados, clearCart, getPrecoEfetivo } = useCart();
+  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -17,8 +20,8 @@ const Checkout = () => {
   const [parcelas, setParcelas] = useState(1);
 
   useEffect(() => {
-    api.get('/loja/config')
-      .then(res => setTelefoneLoja(res.data.whatsapp))
+    getLojaConfig()
+      .then(data => setTelefoneLoja(data.whatsapp))
       .catch(() => toast.error('Erro ao carregar dados da loja.'));
   }, []);
 
@@ -27,7 +30,7 @@ const Checkout = () => {
     bairro: '', cidade: '', estado: '', cep: ''
   });
 
-  const [buscandoCep, setBuscandoCep] = useState(false);
+  const { buscandoCep, lookup: lookupCep } = useCepLookup(setAddress);
 
   const handleAddressChange = (e) => {
     const { name, value } = e.target;
@@ -36,32 +39,10 @@ const Checkout = () => {
     if (name === 'cep') {
       const cepLimpo = value.replace(/\D/g, '');
       if (cepLimpo.length === 8) {
-        buscarCep(cepLimpo);
+        lookupCep(cepLimpo).then(result => {
+          if (!result.ok) toast.error(result.msg);
+        });
       }
-    }
-  };
-
-  const buscarCep = async (cep) => {
-    setBuscandoCep(true);
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const data = await res.json();
-      if (!data.erro) {
-        setAddress(prev => ({
-          ...prev,
-          rua: data.logradouro || prev.rua,
-          bairro: data.bairro || prev.bairro,
-          cidade: data.localidade || prev.cidade,
-          estado: data.uf || prev.estado,
-          complemento: data.complemento || prev.complemento,
-        }));
-      } else {
-        toast.error('CEP não encontrado.');
-      }
-    } catch {
-      toast.error('Erro ao buscar CEP.');
-    } finally {
-      setBuscandoCep(false);
     }
   };
 
@@ -109,8 +90,8 @@ const Checkout = () => {
         ...address,
       };
 
-      const response = await api.post('/pedidos/checkout', payload);
-      const protocolo = response.data.protocolo;
+      const data = await submitCheckout(payload);
+      const protocolo = data.protocolo;
 
       const mensagem = buildWhatsAppMessage(protocolo);
       const fone = telefoneLoja.replace(/\D/g, '').replace(/^0+/, '');
@@ -157,7 +138,7 @@ const Checkout = () => {
                   </div>
                 </div>
                 <div className="checkout-item-price">
-                  {item.precoPromocional && item.precoPromocional < item.preco ? (
+                  {hasPromo(item) ? (
                     <>
                       <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.85em', display: 'block' }}>R$ {(item.preco * item.quantity).toFixed(2)}</span>
                       <span>R$ {(item.precoPromocional * item.quantity).toFixed(2)}</span>

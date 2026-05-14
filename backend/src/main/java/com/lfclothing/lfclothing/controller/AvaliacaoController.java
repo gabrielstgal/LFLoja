@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +58,7 @@ public class AvaliacaoController {
             return ResponseEntity.badRequest().body(Map.of("erro", "A nota deve ser entre 1 e 5."));
         }
 
-        String comentario = (String) body.getOrDefault("comentario", "");
+        String comentario = InputSanitizer.sanitizeHtml((String) body.getOrDefault("comentario", ""));
         if (comentario.length() > 500) {
             comentario = comentario.substring(0, 500);
         }

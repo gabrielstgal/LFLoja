@@ -15,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -53,17 +55,22 @@ public class PedidoController {
             pedido.setEnderecoEntrega(enderecoEntrega);
         }
 
+        if (requisicao.itens().size() > 50) {
+            return ResponseEntity.badRequest().body("Maximo de 50 itens por pedido.");
+        }
+
         for (ItemPedidoRequisicao itemReq : requisicao.itens()) {
+            int quantidade = InputSanitizer.clampQuantity(itemReq.quantidade(), 99);
             Produto produto = produtoRepository.findById(itemReq.produtoId())
                     .orElseThrow(() -> new RuntimeException("Produto nao encontrado: " + itemReq.produtoId()));
 
             BigDecimal precoUnitario = (produto.getPrecoPromocional() != null && produto.getPrecoPromocional().compareTo(produto.getPreco()) < 0)
                     ? produto.getPrecoPromocional() : produto.getPreco();
 
-            ItemPedido itemPedido = new ItemPedido(pedido, produto, itemReq.quantidade(), precoUnitario, itemReq.tamanho());
+            ItemPedido itemPedido = new ItemPedido(pedido, produto, quantidade, precoUnitario, itemReq.tamanho());
             pedido.adicionarItem(itemPedido);
 
-            BigDecimal itemTotal = precoUnitario.multiply(BigDecimal.valueOf(itemReq.quantidade()));
+            BigDecimal itemTotal = precoUnitario.multiply(BigDecimal.valueOf(quantidade));
             total = total.add(itemTotal);
         }
 

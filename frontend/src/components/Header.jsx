@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../context/FavoritesContext';
-import api from '../services/api';
+import { listarCategorias } from '../services/categoriaService';
 import './Header.css';
 
 const Header = () => {
@@ -21,8 +21,8 @@ const Header = () => {
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    api.get('/categorias')
-      .then(res => setCategorias(res.data || []))
+    listarCategorias()
+      .then(data => setCategorias(data))
       .catch(() => setCategorias([]));
   }, []);
 

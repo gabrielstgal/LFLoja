@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.util.List;
 
 @RestController
@@ -35,6 +37,13 @@ public class BannerController {
         if (banner.getUrlImagem() == null || banner.getUrlImagem().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("A imagem do banner é obrigatória.");
         }
+        if (!InputSanitizer.isValidUrl(banner.getUrlImagem())) {
+            return ResponseEntity.badRequest().body("URL da imagem invalida.");
+        }
+        banner.setTitulo(InputSanitizer.sanitizeHtml(banner.getTitulo()));
+        banner.setSubtitulo(InputSanitizer.sanitizeHtml(banner.getSubtitulo()));
+        banner.setBadge(InputSanitizer.sanitizeHtml(banner.getBadge()));
+        banner.setTextoBotao(InputSanitizer.sanitizeHtml(banner.getTextoBotao()));
         return ResponseEntity.ok(bannerRepository.save(banner));
     }
 

@@ -1,92 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState } from 'react';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/Loading';
-import api from '../services/api';
+import useProductFilters from '../hooks/useProductFilters';
+import { getPrecoEfetivo } from '../utils/productUtils';
 import './Catalog.css';
 
 const SIZES = ['P', 'M', 'G', 'GG', 'Único'];
 
 const Catalog = () => {
-  const [searchParams] = useSearchParams();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalElements, setTotalElements] = useState(0);
-  const [dynamicCategories, setDynamicCategories] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState(() => {
-    const cat = searchParams.get('categoria');
-    return cat ? [cat] : [];
-  });
-  const [selectedSize, setSelectedSize] = useState('');
-  const [sort, setSort] = useState('id,desc');
-  const [page, setPage] = useState(0);
-  const [busca, setBusca] = useState(searchParams.get('busca') || '');
-  const [buscaInput, setBuscaInput] = useState(searchParams.get('busca') || '');
-  const [precoMin, setPrecoMin] = useState(0);
-  const [precoMax, setPrecoMax] = useState(1000);
+  const {
+    products, loading, totalElements, dynamicCategories,
+    selectedCategories, setSelectedCategories,
+    selectedSize, setSelectedSize,
+    page, setPage,
+    busca, buscaInput, setBuscaInput,
+    precoMin, setPrecoMin, precoMax, setPrecoMax,
+    handleCategoryChange, handleSearch, clearSearch,
+  } = useProductFilters();
+
   const [filtersOpen, setFiltersOpen] = useState(false);
-
-  useEffect(() => {
-    api.get('/categorias')
-      .then(res => setDynamicCategories(res.data || []))
-      .catch(() => setDynamicCategories([]));
-  }, []);
-
-  useEffect(() => {
-    const buscaParam = searchParams.get('busca');
-    const catParam = searchParams.get('categoria');
-
-    if (buscaParam && buscaParam !== busca) {
-      setBusca(buscaParam);
-      setBuscaInput(buscaParam);
-      setPage(0);
-    }
-    if (catParam) {
-      setSelectedCategories([catParam]);
-      setPage(0);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    setLoading(true);
-    let url = `/produtos/buscar?pagina=${page}&tamanho=12&ordenar=${sort}`;
-    if (selectedCategories.length > 0) {
-      url += `&categorias=${selectedCategories.join(',')}`;
-    }
-    if (busca.trim()) {
-      url += `&busca=${encodeURIComponent(busca.trim())}`;
-    }
-    if (selectedSize) {
-      const sizeValue = selectedSize === 'Único' ? 'Unico' : selectedSize;
-      url += `&tamanhoFiltro=${sizeValue}`;
-    }
-
-    api.get(url)
-      .then(res => {
-        setProducts(res.data.content || []);
-        setTotalElements(res.data.totalElements || 0);
-      })
-      .catch(err => {
-        console.error(err);
-        if (err.response?.status === 404) {
-          api.get('/produtos').then(res => setProducts(res.data));
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [selectedCategories, selectedSize, sort, page, busca]);
-
-  const handleCategoryChange = (cat) => {
-    setSelectedCategories(prev =>
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-    );
-    setPage(0);
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setBusca(buscaInput);
-    setPage(0);
-  };
 
   return (
     <div className="catalog-container">
@@ -184,7 +116,7 @@ const Catalog = () => {
         {busca && (
           <div className="catalog-search-active">
             Resultados para: <strong>"{busca}"</strong>
-            <button onClick={() => { setBusca(''); setBuscaInput(''); setPage(0); }} className="catalog-search-clear">Limpar</button>
+            <button onClick={clearSearch} className="catalog-search-clear">Limpar</button>
           </div>
         )}
 
@@ -195,7 +127,7 @@ const Catalog = () => {
         ) : (
           <>
             <div className="catalog-grid">
-              {products.filter(p => { const preco = p.precoPromocional || p.preco; return preco >= precoMin && preco <= precoMax; }).map(product => (
+              {products.filter(p => { const preco = getPrecoEfetivo(p); return preco >= precoMin && preco <= precoMax; }).map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

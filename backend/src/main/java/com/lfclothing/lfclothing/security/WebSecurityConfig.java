@@ -31,13 +31,15 @@ public class WebSecurityConfig {
 
     private final UserDetailsService userDetailsService;
     private final AuthTokenFilter authTokenFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:5174}")
     private List<String> allowedOrigins;
 
-    public WebSecurityConfig(UserDetailsService userDetailsService, AuthTokenFilter authTokenFilter) {
+    public WebSecurityConfig(UserDetailsService userDetailsService, AuthTokenFilter authTokenFilter, RateLimitFilter rateLimitFilter) {
         this.userDetailsService = userDetailsService;
         this.authTokenFilter = authTokenFilter;
+        this.rateLimitFilter = rateLimitFilter;
     }
 
     @Bean
@@ -67,7 +69,12 @@ public class WebSecurityConfig {
                 .frameOptions(frame -> frame.deny())
                 .httpStrictTransportSecurity(hsts -> hsts
                     .includeSubDomains(true)
+                    .preload(true)
                     .maxAgeInSeconds(31536000))
+                .referrerPolicy(referrer -> referrer
+                    .policy(org.springframework.security.web.headers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                .permissionsPolicyHeader(permissions -> permissions
+                    .policy("camera=(), microphone=(), geolocation=(), payment=()"))
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth ->
@@ -83,6 +90,7 @@ public class WebSecurityConfig {
             );
 
         http.authenticationProvider(authenticationProvider());
+        http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -93,10 +101,12 @@ public class WebSecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(Arrays.asList("Content-Type", "X-Requested-With"));
+        configuration.setExposedHeaders(List.of());
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight por 1 hora
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/api/**", configuration);
         return source;
     }
 }

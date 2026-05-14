@@ -3,12 +3,13 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { hasPromo } from '../utils/productUtils';
 import './SideCart.css';
 
 const SideCart = () => {
   const {
-    cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, clearCart,
-    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom, getPrecoEfetivo, updateSize
+    cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity,
+    cartSubtotal, cartTotal, desconto, cupomAplicado, aplicarCupom, removerCupom, updateSize
   } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -86,7 +87,7 @@ const SideCart = () => {
                       ))}
                     </div>
                   ) : null}
-                  {item.precoPromocional && item.precoPromocional < item.preco ? (
+                  {hasPromo(item) ? (
                     <p className="item-price">
                       <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '0.85em', marginRight: '6px' }}>R$ {item.preco.toFixed(2)}</span>
                       <span style={{ color: 'var(--color-primary)' }}>R$ {item.precoPromocional.toFixed(2)}</span>

@@ -2,42 +2,35 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/Loading';
-import api from '../services/api';
+import useBannerCarousel from '../hooks/useBannerCarousel';
+import { buscarProdutos } from '../services/produtoService';
+import { listarCategorias } from '../services/categoriaService';
+import { listarBanners } from '../services/bannerService';
 import './Home.css';
 
 const Home = () => {
   const [novidades, setNovidades] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [banners, setBanners] = useState([]);
-  const [bannerIndex, setBannerIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showArrow, setShowArrow] = useState(false);
   const navigate = useNavigate();
   const scrollRef = useRef(null);
+  const { current, bannerIndex, setBannerIndex, slides } = useBannerCarousel(banners);
 
   useEffect(() => {
     Promise.all([
-      api.get('/produtos/buscar?pagina=0&tamanho=8&ordenar=id,desc')
-        .then(res => setNovidades(res.data.content || []))
+      buscarProdutos({ pagina: 0, tamanho: 8 })
+        .then(data => setNovidades(data.content || []))
         .catch(() => setNovidades([])),
-      api.get('/categorias')
-        .then(res => setCategorias(res.data || []))
+      listarCategorias()
+        .then(data => setCategorias(data))
         .catch(() => setCategorias([])),
-      api.get('/banners')
-        .then(res => setBanners(res.data || []))
+      listarBanners()
+        .then(data => setBanners(data))
         .catch(() => setBanners([])),
     ]).finally(() => setLoading(false));
   }, []);
-
-  // Auto-slide banners (padrão intercalado com banners ativos)
-  const totalSlides = banners.length > 0 ? banners.length * 2 : 1;
-  useEffect(() => {
-    if (totalSlides <= 1) return;
-    const interval = setInterval(() => {
-      setBannerIndex(prev => (prev + 1) % totalSlides);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [totalSlides]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -55,50 +48,34 @@ const Home = () => {
   return (
     <>
       <section className="hero-banner-carousel">
-        {(() => {
-          const slides = [];
-          if (banners.length > 0) {
-            banners.forEach((banner) => {
-              slides.push(null);
-              slides.push(banner);
-            });
-          } else {
-            slides.push(null);
-          }
-          const current = slides[bannerIndex] || null;
-          return (
-            <>
-              <div className="hero-banner-slide">
-                <div className="hero-left">
-                  <span className="hero-badge">{current?.badge || 'Nova Coleção 2026'}</span>
-                  <h1 className="hero-title">
-                    {current?.titulo || <>Estilo que marca <span className="hero-title-accent">presença.</span></>}
-                  </h1>
-                  <p className="hero-subtitle">
-                    {current?.subtitulo || 'Vista o melhor da moda masculina em Campina Grande. Exclusividade, qualidade e a força que você merece.'}
-                  </p>
-                  <button onClick={() => navigate(current?.link || '/catalogo')} className="btn-primary hero-cta">
-                    {current?.textoBotao || 'Explorar Coleção'}
-                  </button>
-                </div>
-                <div className="hero-right">
-                  <img key={current?.id || 'default'} src={current?.urlImagem || '/img/produtos/IMG_9668.jpg'} alt="LF Clothing" className="hero-model-img" />
-                </div>
-              </div>
-              {slides.length > 1 && (
-                <div className="hero-banner-dots">
-                  {slides.map((_, idx) => (
-                    <button
-                      key={idx}
-                      className={`hero-banner-dot ${idx === bannerIndex ? 'active' : ''}`}
-                      onClick={() => setBannerIndex(idx)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          );
-        })()}
+        <div className="hero-banner-slide">
+          <div className="hero-left">
+            <span className="hero-badge">{current?.badge || 'Nova Coleção 2026'}</span>
+            <h1 className="hero-title">
+              {current?.titulo || <>Estilo que marca <span className="hero-title-accent">presença.</span></>}
+            </h1>
+            <p className="hero-subtitle">
+              {current?.subtitulo || 'Vista o melhor da moda masculina em Campina Grande. Exclusividade, qualidade e a força que você merece.'}
+            </p>
+            <button onClick={() => navigate(current?.link || '/catalogo')} className="btn-primary hero-cta">
+              {current?.textoBotao || 'Explorar Coleção'}
+            </button>
+          </div>
+          <div className="hero-right">
+            <img key={current?.id || 'default'} src={current?.urlImagem || '/img/produtos/IMG_9668.jpg'} alt="LF Clothing" className="hero-model-img" />
+          </div>
+        </div>
+        {slides.length > 1 && (
+          <div className="hero-banner-dots">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                className={`hero-banner-dot ${idx === bannerIndex ? 'active' : ''}`}
+                onClick={() => setBannerIndex(idx)}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {categorias.length > 0 && (

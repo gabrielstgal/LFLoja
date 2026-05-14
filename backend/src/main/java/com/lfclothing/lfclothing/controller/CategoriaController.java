@@ -6,6 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lfclothing.lfclothing.security.InputSanitizer;
+
 import java.util.List;
 
 @RestController
@@ -26,10 +28,14 @@ public class CategoriaController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<?> criar(@RequestBody Categoria categoria) {
-        if (categoria.getNome() == null || categoria.getNome().trim().isEmpty()) {
+        String nome = InputSanitizer.sanitizeText(categoria.getNome());
+        if (nome == null || nome.isBlank()) {
             return ResponseEntity.badRequest().body("Nome da categoria é obrigatório.");
         }
-        categoria.setNome(categoria.getNome().trim());
+        if (!InputSanitizer.isValidUrl(categoria.getUrlImagem())) {
+            return ResponseEntity.badRequest().body("URL da imagem invalida.");
+        }
+        categoria.setNome(nome);
         return ResponseEntity.ok(categoriaRepository.save(categoria));
     }
 
