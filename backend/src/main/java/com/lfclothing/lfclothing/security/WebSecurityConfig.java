@@ -71,8 +71,6 @@ public class WebSecurityConfig {
                     .includeSubDomains(true)
                     .preload(true)
                     .maxAgeInSeconds(31536000))
-                .referrerPolicy(referrer -> referrer
-                    .policy(org.springframework.security.web.headers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 .permissionsPolicyHeader(permissions -> permissions
                     .policy("camera=(), microphone=(), geolocation=(), payment=()"))
             )

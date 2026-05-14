@@ -40,6 +40,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // Security header que o Spring Security 7 não expõe via DSL
+        response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
         String clientIp = getClientIp(request);
         String path = request.getRequestURI();
         String method = request.getMethod();
