@@ -113,10 +113,19 @@
 }
 
 .hero-banner-slide {
-  display: flex;
-  flex-direction: row-reverse;
-  min-height: 30vh;
   animation: bannerFadeIn 0.5s ease;
+}
+
+.hero-banner-image-only {
+  width: 100%;
+  overflow: hidden;
+}
+
+.hero-banner-full-img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  max-height: 70vh;
 }
 
 @keyframes bannerFadeIn {
@@ -151,48 +160,18 @@
 }
 
 @media (max-width: 768px) {
-  .hero-banner-slide {
-    flex-direction: column;
-    min-height: auto;
+  .hero-banner-full-img {
+    max-height: 50vh;
   }
-
-  .hero-banner-slide .hero-right {
-    flex: none;
-    width: 100%;
-    height: auto;
-    overflow: hidden;
-  }
-
-  .hero-banner-slide .hero-right img {
-    width: 100%;
-    height: auto;
-    display: block;
-    object-fit: contain;
-  }
-
-  .hero-banner-slide .hero-left {
-    flex: none;
-    padding: 1.5rem 5%;
-    text-align: center;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  .hero-banner-slide .hero-title { font-size: 1.8rem; }
-  .hero-banner-slide .hero-subtitle { font-size: 0.85rem; max-width: 100%; }
-  .hero-banner-slide .hero-badge { font-size: 0.65rem; margin-bottom: 0.5rem; }
-  .hero-banner-slide .hero-cta { padding: 0.7rem 2rem; font-size: 0.85rem; }
 
   .hero-banner-dots { bottom: 0.75rem; }
   .hero-banner-dot { width: 8px; height: 8px; }
 }
 
 @media (max-width: 480px) {
-  .hero-banner-slide .hero-title { font-size: 1.4rem; }
-  .hero-banner-slide .hero-subtitle { font-size: 0.75rem; margin-bottom: 0.3rem; }
-  .hero-banner-slide .hero-left { padding: 0.8rem 5%; gap: 0.3rem; }
-  .hero-banner-slide .hero-badge { font-size: 0.6rem; margin-bottom: 0.3rem; padding: 0.2rem 0.7rem; }
-  .hero-banner-slide .hero-cta { padding: 0.6rem 1.8rem; font-size: 0.8rem; }
+  .hero-banner-full-img {
+    max-height: 40vh;
+  }
 }
 
 /* Benefits bar */

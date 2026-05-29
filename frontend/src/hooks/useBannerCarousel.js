@@ -3,15 +3,7 @@ import { useState, useEffect } from 'react';
 const useBannerCarousel = (banners) => {
   const [bannerIndex, setBannerIndex] = useState(0);
 
-  const slides = [];
-  if (banners.length > 0) {
-    banners.forEach((banner) => {
-      slides.push(null);
-      slides.push(banner);
-    });
-  } else {
-    slides.push(null);
-  }
+  const slides = banners.length > 0 ? banners : [];
 
   useEffect(() => {
     if (slides.length <= 1) return;

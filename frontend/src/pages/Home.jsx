@@ -47,36 +47,28 @@ const Home = () => {
 
   return (
     <>
-      <section className="hero-banner-carousel">
-        <div className="hero-banner-slide">
-          <div className="hero-right">
-            <img key={current?.id || 'default'} src={current?.urlImagem || '/img/produtos/IMG_9668.jpg'} alt="LF Clothing" className="hero-model-img" />
+      {slides.length > 0 && current && (
+        <section className="hero-banner-carousel">
+          <div
+            className="hero-banner-slide hero-banner-image-only"
+            onClick={() => navigate(current.link || '/catalogo')}
+            style={{ cursor: 'pointer' }}
+          >
+            <img key={current.id} src={current.urlImagem} alt={current.titulo || 'LF Clothing'} className="hero-banner-full-img" />
           </div>
-          <div className="hero-left">
-            <span className="hero-badge">{current?.badge || 'Nova Coleção 2026'}</span>
-            <h1 className="hero-title">
-              {current?.titulo || <>Estilo que marca <span className="hero-title-accent">presença.</span></>}
-            </h1>
-            <p className="hero-subtitle">
-              {current?.subtitulo || 'Vista o melhor da moda masculina em Campina Grande. Exclusividade, qualidade e a força que você merece.'}
-            </p>
-            <button onClick={() => navigate(current?.link || '/catalogo')} className="btn-primary hero-cta">
-              {current?.textoBotao || 'Explorar Coleção'}
-            </button>
-          </div>
-        </div>
-        {slides.length > 1 && (
-          <div className="hero-banner-dots">
-            {slides.map((_, idx) => (
-              <button
-                key={idx}
-                className={`hero-banner-dot ${idx === bannerIndex ? 'active' : ''}`}
-                onClick={() => setBannerIndex(idx)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+          {slides.length > 1 && (
+            <div className="hero-banner-dots">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  className={`hero-banner-dot ${idx === bannerIndex ? 'active' : ''}`}
+                  onClick={() => setBannerIndex(idx)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {categorias.length > 0 && (
         <section className="categories-section">
