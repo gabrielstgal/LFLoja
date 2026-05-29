@@ -110,13 +110,6 @@
 .hero-banner-carousel {
   position: relative;
   width: 100%;
-  margin-top: -80px;
-}
-
-@media (max-width: 768px) {
-  .hero-banner-carousel {
-    margin-top: -64px;
-  }
 }
 
 .hero-banner-slide {
@@ -131,8 +124,6 @@
 .hero-banner-full-img {
   width: 100%;
   display: block;
-  object-fit: cover;
-  max-height: 70vh;
 }
 
 @keyframes bannerFadeIn {
@@ -167,18 +158,8 @@
 }
 
 @media (max-width: 768px) {
-  .hero-banner-full-img {
-    max-height: 50vh;
-  }
-
   .hero-banner-dots { bottom: 0.75rem; }
   .hero-banner-dot { width: 8px; height: 8px; }
-}
-
-@media (max-width: 480px) {
-  .hero-banner-full-img {
-    max-height: 40vh;
-  }
 }
 
 /* Benefits bar */
