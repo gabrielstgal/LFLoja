@@ -6,12 +6,11 @@ import { uploadImagem } from '../../services/produtoService';
 const AdminCategories = ({ categorias, onReload }) => {
   const [catNome, setCatNome] = useState('');
   const [catImagem, setCatImagem] = useState('');
-  const [catOrdem, setCatOrdem] = useState(0);
   const [catEditId, setCatEditId] = useState(null);
   const [catUploading, setCatUploading] = useState(false);
 
   const clearCatForm = () => {
-    setCatNome(''); setCatImagem(''); setCatOrdem(0); setCatEditId(null);
+    setCatNome(''); setCatImagem(''); setCatEditId(null);
   };
 
   const handleCatImageUpload = async (e) => {
@@ -28,7 +27,10 @@ const AdminCategories = ({ categorias, onReload }) => {
   const handleSalvarCategoria = async (e) => {
     e.preventDefault();
     if (!catNome.trim()) return;
-    const payload = { nome: catNome.trim(), urlImagem: catImagem, ordem: catOrdem };
+    const ordem = catEditId
+      ? categorias.find(c => c.id === catEditId)?.ordem || 0
+      : categorias.length;
+    const payload = { nome: catNome.trim(), urlImagem: catImagem, ordem };
     try {
       if (catEditId) {
         await atualizarCategoria(catEditId, payload);
@@ -49,7 +51,6 @@ const AdminCategories = ({ categorias, onReload }) => {
     setCatEditId(cat.id);
     setCatNome(cat.nome);
     setCatImagem(cat.urlImagem || '');
-    setCatOrdem(cat.ordem || 0);
   };
 
   const handleDeleteCategoria = async (id) => {
@@ -58,13 +59,31 @@ const AdminCategories = ({ categorias, onReload }) => {
     catch { toast.error('Erro ao remover categoria.'); }
   };
 
+  const handleMover = async (index, direcao) => {
+    const sorted = [...categorias];
+    const targetIndex = index + direcao;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+
+    const catA = sorted[index];
+    const catB = sorted[targetIndex];
+
+    try {
+      await Promise.all([
+        atualizarCategoria(catA.id, { nome: catA.nome, urlImagem: catA.urlImagem, ordem: catB.ordem }),
+        atualizarCategoria(catB.id, { nome: catB.nome, urlImagem: catB.urlImagem, ordem: catA.ordem }),
+      ]);
+      onReload();
+    } catch {
+      toast.error('Erro ao reordenar.');
+    }
+  };
+
   return (
     <div>
       <h2 className="admin-section-title">Gerenciar Categorias</h2>
 
       <form onSubmit={handleSalvarCategoria} className="admin-cat-form">
         <input type="text" placeholder="Nome da categoria (ex: Short Linho)" value={catNome} onChange={e => setCatNome(e.target.value)} required maxLength={50} className="admin-input" />
-        <input type="number" placeholder="Ordem" value={catOrdem} onChange={e => setCatOrdem(Number(e.target.value))} className="admin-input" style={{ width: '80px' }} title="Ordem de exibição (menor aparece primeiro)" />
         <div className="admin-cat-img-area">
           {catImagem ? (
             <div className="admin-cat-img-preview">
@@ -82,19 +101,37 @@ const AdminCategories = ({ categorias, onReload }) => {
         {catEditId && <button type="button" onClick={clearCatForm} className="admin-cancel-btn">Cancelar</button>}
       </form>
 
-      <div className="admin-cat-grid">
-        {categorias.map(cat => (
-          <div key={cat.id} className="admin-cat-card">
-            {cat.urlImagem ? (
-              <img src={cat.urlImagem} alt={cat.nome} className="admin-cat-card-img" />
-            ) : (
-              <div className="admin-cat-card-placeholder" />
-            )}
-            <div className="admin-cat-card-info">
-              <span className="admin-cat-card-name">{cat.nome}</span>
-              <span className="admin-cat-card-order">Ordem: {cat.ordem}</span>
+      <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '1rem' }}>
+        Use as setas para definir a ordem de exibicao das categorias na loja.
+      </p>
+
+      <div className="admin-cat-list">
+        {categorias.map((cat, idx) => (
+          <div key={cat.id} className="admin-cat-row">
+            <span className="admin-cat-row-pos">{idx + 1}</span>
+            <div className="admin-cat-row-arrows">
+              <button
+                type="button"
+                className="admin-cat-arrow-btn"
+                disabled={idx === 0}
+                onClick={() => handleMover(idx, -1)}
+                title="Subir"
+              >&#9650;</button>
+              <button
+                type="button"
+                className="admin-cat-arrow-btn"
+                disabled={idx === categorias.length - 1}
+                onClick={() => handleMover(idx, 1)}
+                title="Descer"
+              >&#9660;</button>
             </div>
-            <div className="admin-cat-card-actions">
+            {cat.urlImagem ? (
+              <img src={cat.urlImagem} alt={cat.nome} className="admin-cat-row-img" />
+            ) : (
+              <div className="admin-cat-row-img-placeholder" />
+            )}
+            <span className="admin-cat-row-name">{cat.nome}</span>
+            <div className="admin-cat-row-actions">
               <button onClick={() => handleEditCategoria(cat)} className="admin-edit-btn">Editar</button>
               <button onClick={() => handleDeleteCategoria(cat.id)} className="admin-delete-btn">Remover</button>
             </div>

@@ -1168,53 +1168,89 @@ textarea.admin-input {
   text-align: center;
 }
 
-.admin-cat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+.admin-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.admin-cat-card {
+.admin-cat-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  overflow: hidden;
 }
 
-.admin-cat-card-img {
-  width: 100%;
-  aspect-ratio: 16/10;
+.admin-cat-row-pos {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.admin-cat-row-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-cat-arrow-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.6rem;
+  padding: 2px 6px;
+  color: var(--color-text-muted);
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.admin-cat-arrow-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.admin-cat-arrow-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.admin-cat-row-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   object-fit: cover;
   background: #eee;
+  flex-shrink: 0;
 }
 
-.admin-cat-card-placeholder {
-  width: 100%;
-  aspect-ratio: 16/10;
+.admin-cat-row-img-placeholder {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #eee 0%, #ddd 100%);
+  flex-shrink: 0;
 }
 
-.admin-cat-card-info {
-  padding: 0.75rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.admin-cat-card-name {
+.admin-cat-row-name {
   font-weight: 600;
   font-size: 0.9rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.admin-cat-card-order {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-}
-
-.admin-cat-card-actions {
-  padding: 0 1rem 0.75rem;
+.admin-cat-row-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
@@ -1224,5 +1260,6 @@ textarea.admin-input {
   .admin-kpi-grid { grid-template-columns: 1fr 1fr; }
   .admin-kpi-card { padding: 1.25rem; }
   .admin-kpi-value { font-size: 1.4rem; }
-  .admin-cat-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .admin-cat-row { padding: 0.5rem 0.75rem; gap: 0.5rem; }
+  .admin-cat-row-name { font-size: 0.8rem; }
 }
