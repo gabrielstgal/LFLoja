@@ -48,8 +48,8 @@ public class ProdutoController {
         }
 
         String nomeOriginal = arquivo.getOriginalFilename();
-        if (nomeOriginal != null && !nomeOriginal.matches("^[a-zA-Z0-9._\\-]+$")) {
-            return ResponseEntity.badRequest().body(Map.of("erro", "Nome de arquivo invalido."));
+        if (nomeOriginal != null && !nomeOriginal.matches("^[a-zA-Z0-9._\\-\\s()\\[\\]]+$")) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Nome de arquivo invalido. Renomeie sem acentos ou caracteres especiais."));
         }
 
         try {

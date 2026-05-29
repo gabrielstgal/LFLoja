@@ -22,11 +22,18 @@ const AdminBanners = ({ bannersList, categorias, onReload }) => {
   const handleBannerImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande. Maximo 5MB.');
+      return;
+    }
     setBannerUploading(true);
     try {
       const url = await uploadImagem(file);
       if (url) { setBannerImagem(url); toast.success('Imagem do banner enviada!'); }
-    } catch { toast.error('Falha ao enviar imagem.'); }
+    } catch (err) {
+      const msg = err.response?.data?.erro;
+      toast.error(msg || 'Falha ao enviar imagem. Verifique o formato (JPG, PNG ou WebP) e o nome do arquivo.');
+    }
     finally { setBannerUploading(false); }
   };
 
@@ -70,9 +77,14 @@ const AdminBanners = ({ bannersList, categorias, onReload }) => {
   return (
     <div>
       <h2 className="admin-section-title">Banners da Home</h2>
-      <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-        Os banners aparecem como carrossel na página inicial. Use imagens de alta qualidade (1920x800px recomendado).
-      </p>
+      <div style={{ color: 'var(--color-text-muted)', marginBottom: '1.5rem', fontSize: '0.85rem', lineHeight: '1.6' }}>
+        <p>Os banners aparecem como carrossel na pagina inicial.</p>
+        <p style={{ marginTop: '0.5rem' }}>
+          <strong style={{ color: 'var(--color-text)' }}>Tamanho ideal:</strong> 1920x800px (proporcao 2.4:1) — Desktop mostra metade da imagem, mobile mostra inteira.<br/>
+          <strong style={{ color: 'var(--color-text)' }}>Formatos:</strong> JPG, PNG ou WebP — maximo 5MB.<br/>
+          <strong style={{ color: 'var(--color-text)' }}>Dica:</strong> Se a foto nao enviar, verifique se o nome do arquivo nao tem acentos ou caracteres especiais. Renomeie para algo simples (ex: banner1.jpg).
+        </p>
+      </div>
 
       <form onSubmit={handleSalvarBanner} className="admin-banner-form" style={{ marginBottom: '2rem' }}>
         <div className="admin-banner-form-grid">
