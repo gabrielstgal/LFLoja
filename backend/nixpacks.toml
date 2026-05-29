@@ -1,0 +1,2 @@
+[start]
+cmd = "java -Xmx256m -Xms128m -jar target/*.jar"
