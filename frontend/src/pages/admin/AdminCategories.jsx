@@ -8,6 +8,9 @@ const AdminCategories = ({ categorias, onReload }) => {
   const [catImagem, setCatImagem] = useState('');
   const [catEditId, setCatEditId] = useState(null);
   const [catUploading, setCatUploading] = useState(false);
+  const [localCats, setLocalCats] = useState(null);
+
+  const lista = localCats || categorias;
 
   const clearCatForm = () => {
     setCatNome(''); setCatImagem(''); setCatEditId(null);
@@ -40,6 +43,7 @@ const AdminCategories = ({ categorias, onReload }) => {
         toast.success('Categoria criada!');
       }
       clearCatForm();
+      setLocalCats(null);
       onReload();
     } catch (err) {
       const msg = err.response?.data;
@@ -55,25 +59,34 @@ const AdminCategories = ({ categorias, onReload }) => {
 
   const handleDeleteCategoria = async (id) => {
     if (!window.confirm('Remover esta categoria?')) return;
-    try { await deletarCategoria(id); toast.success('Categoria removida!'); onReload(); }
-    catch { toast.error('Erro ao remover categoria.'); }
+    try {
+      await deletarCategoria(id);
+      toast.success('Categoria removida!');
+      setLocalCats(null);
+      onReload();
+    } catch { toast.error('Erro ao remover categoria.'); }
   };
 
   const handleMover = async (index, direcao) => {
-    const sorted = [...categorias];
+    const arr = [...lista];
     const targetIndex = index + direcao;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+    if (targetIndex < 0 || targetIndex >= arr.length) return;
 
-    const catA = sorted[index];
-    const catB = sorted[targetIndex];
+    // Swap otimista - aparece instantâneo
+    [arr[index], arr[targetIndex]] = [arr[targetIndex], arr[index]];
+    setLocalCats(arr);
 
+    const catA = arr[index];
+    const catB = arr[targetIndex];
+
+    // 2 PUTs em paralelo com ordem baseada no índice (nunca valores iguais)
     try {
       await Promise.all([
-        atualizarCategoria(catA.id, { nome: catA.nome, urlImagem: catA.urlImagem, ordem: catB.ordem }),
-        atualizarCategoria(catB.id, { nome: catB.nome, urlImagem: catB.urlImagem, ordem: catA.ordem }),
+        atualizarCategoria(catA.id, { nome: catA.nome, urlImagem: catA.urlImagem, ordem: index }),
+        atualizarCategoria(catB.id, { nome: catB.nome, urlImagem: catB.urlImagem, ordem: targetIndex }),
       ]);
-      onReload();
     } catch {
+      setLocalCats(null);
       toast.error('Erro ao reordenar.');
     }
   };
@@ -106,7 +119,7 @@ const AdminCategories = ({ categorias, onReload }) => {
       </p>
 
       <div className="admin-cat-list">
-        {categorias.map((cat, idx) => (
+        {lista.map((cat, idx) => (
           <div key={cat.id} className="admin-cat-row">
             <span className="admin-cat-row-pos">{idx + 1}</span>
             <div className="admin-cat-row-arrows">
@@ -120,7 +133,7 @@ const AdminCategories = ({ categorias, onReload }) => {
               <button
                 type="button"
                 className="admin-cat-arrow-btn"
-                disabled={idx === categorias.length - 1}
+                disabled={idx === lista.length - 1}
                 onClick={() => handleMover(idx, 1)}
                 title="Descer"
               >&#9660;</button>
@@ -137,7 +150,7 @@ const AdminCategories = ({ categorias, onReload }) => {
             </div>
           </div>
         ))}
-        {categorias.length === 0 && <p className="admin-table-empty">Nenhuma categoria cadastrada.</p>}
+        {lista.length === 0 && <p className="admin-table-empty">Nenhuma categoria cadastrada.</p>}
       </div>
     </div>
   );

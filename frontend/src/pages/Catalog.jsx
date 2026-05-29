@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import ProductCard from '../components/ProductCard';
 import Loading from '../components/Loading';
 import useProductFilters from '../hooks/useProductFilters';
@@ -19,6 +19,11 @@ const Catalog = () => {
   } = useProductFilters();
 
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const filteredProducts = useMemo(() =>
+    products.filter(p => { const preco = getPrecoEfetivo(p); return preco >= precoMin && preco <= precoMax; }),
+    [products, precoMin, precoMax]
+  );
 
   return (
     <div className="catalog-container">
@@ -127,7 +132,7 @@ const Catalog = () => {
         ) : (
           <>
             <div className="catalog-grid">
-              {products.filter(p => { const preco = getPrecoEfetivo(p); return preco >= precoMin && preco <= precoMax; }).map(product => (
+              {filteredProducts.map(product => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

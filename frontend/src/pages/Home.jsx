@@ -49,6 +49,9 @@ const Home = () => {
     <>
       <section className="hero-banner-carousel">
         <div className="hero-banner-slide">
+          <div className="hero-right">
+            <img key={current?.id || 'default'} src={current?.urlImagem || '/img/produtos/IMG_9668.jpg'} alt="LF Clothing" className="hero-model-img" />
+          </div>
           <div className="hero-left">
             <span className="hero-badge">{current?.badge || 'Nova Coleção 2026'}</span>
             <h1 className="hero-title">
@@ -60,9 +63,6 @@ const Home = () => {
             <button onClick={() => navigate(current?.link || '/catalogo')} className="btn-primary hero-cta">
               {current?.textoBotao || 'Explorar Coleção'}
             </button>
-          </div>
-          <div className="hero-right">
-            <img key={current?.id || 'default'} src={current?.urlImagem || '/img/produtos/IMG_9668.jpg'} alt="LF Clothing" className="hero-model-img" />
           </div>
         </div>
         {slides.length > 1 && (
