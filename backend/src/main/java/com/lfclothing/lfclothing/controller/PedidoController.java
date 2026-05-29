@@ -112,14 +112,14 @@ public class PedidoController {
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/todos")
     public ResponseEntity<List<Pedido>> todosPedidos() {
-        return ResponseEntity.ok(pedidoRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "dataCriacao")));
+        return ResponseEntity.ok(pedidoRepository.findAllWithDetails());
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/status")
     @Transactional
     public ResponseEntity<?> atualizarStatusPedido(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
-        Pedido pedido = pedidoRepository.findById(id).orElseThrow(() -> new RuntimeException("Pedido nao encontrado."));
+        Pedido pedido = pedidoRepository.findByIdWithDetails(id).orElseThrow(() -> new RuntimeException("Pedido nao encontrado."));
         try {
             StatusPedido statusAnterior = pedido.getStatus();
             StatusPedido novoStatus = StatusPedido.valueOf(body.get("status"));
