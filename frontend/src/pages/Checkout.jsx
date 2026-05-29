@@ -111,7 +111,7 @@ const Checkout = () => {
     }
   };
 
-  if (!user) { navigate('/auth'); return null; }
+  if (!user) { navigate('/auth?redirect=/checkout'); return null; }
 
   const parcelasOptions = [];
   for (let i = 1; i <= 12; i++) {

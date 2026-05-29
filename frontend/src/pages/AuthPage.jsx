@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import './AuthPage.css';
 
@@ -26,6 +26,7 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -59,7 +60,8 @@ const AuthPage = () => {
       if (isLogin) {
         await login(email, senha);
         toast.success("Bem-vindo de volta!");
-        navigate('/cliente');
+        const redirect = searchParams.get('redirect');
+        navigate(redirect || '/cliente');
       } else {
         await register(nome, email, senha);
         toast.success("Cadastro processado! Tente fazer login.");

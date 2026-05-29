@@ -35,8 +35,14 @@ export const CartProvider = ({ children }) => {
   const [cupomDados, setCupomDados] = useState(null);
   const [desconto, setDesconto] = useState(0);
 
+  const prevUserRef = React.useRef(user);
+
   useEffect(() => {
+    const prevUser = prevUserRef.current;
+    prevUserRef.current = user;
+
     if (user) {
+      // Login: carregar carrinho do usuário e mesclar com guest
       const userCart = loadCart(getCartKey(user.id));
       const guestCart = loadCart(GUEST_CART_KEY);
 
@@ -55,7 +61,12 @@ export const CartProvider = ({ children }) => {
       } else {
         setCartItems(userCart);
       }
+    } else if (prevUser) {
+      // Logout: limpar carrinho sem vazar itens para o guest
+      localStorage.removeItem(GUEST_CART_KEY);
+      setCartItems([]);
     } else {
+      // Visitante inicial: carregar carrinho guest
       setCartItems(loadCart(GUEST_CART_KEY));
     }
   }, [user]);

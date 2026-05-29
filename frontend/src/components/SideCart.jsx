@@ -25,7 +25,7 @@ const SideCart = () => {
     if (!user) {
       toast.error("Você precisa estar logado para finalizar a compra!");
       setIsCartOpen(false);
-      navigate('/auth');
+      navigate('/auth?redirect=/checkout');
       return;
     }
     if (hasItemWithoutSize) {
