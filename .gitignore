@@ -51,6 +51,7 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+ehthumbs.db
 
 # IDE
 .idea/
@@ -60,8 +61,25 @@ desktop.ini
 *.njsproj
 *.sln
 *.sw?
+*.swp
+*.swo
+*~
+
+# Security — never commit these
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+*.pfx
+*.cer
+*.crt
 
 # Root
 node_modules/
 package-lock.json
 test.js
+
+# Crash reports
+hs_err_pid*
+replay_pid*

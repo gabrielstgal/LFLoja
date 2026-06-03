@@ -25,6 +25,15 @@ public class Cupom {
     @Column(nullable = false)
     private boolean ativo = true;
 
+    @Column(name = "uso_maximo")
+    private Integer usoMaximo;
+
+    @Column(name = "uso_atual", nullable = false)
+    private int usoAtual = 0;
+
+    @Column(name = "data_expiracao")
+    private LocalDateTime dataExpiracao;
+
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
     public Cupom() {}
@@ -33,6 +42,17 @@ public class Cupom {
         this.codigo = codigo.toUpperCase().trim();
         this.tipo = tipo;
         this.valor = valor;
+    }
+
+    public boolean isValido() {
+        if (!ativo) return false;
+        if (dataExpiracao != null && LocalDateTime.now().isAfter(dataExpiracao)) return false;
+        if (usoMaximo != null && usoAtual >= usoMaximo) return false;
+        return true;
+    }
+
+    public void incrementarUso() {
+        this.usoAtual++;
     }
 
     public Long getId() { return id; }
@@ -49,6 +69,15 @@ public class Cupom {
 
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
+
+    public Integer getUsoMaximo() { return usoMaximo; }
+    public void setUsoMaximo(Integer usoMaximo) { this.usoMaximo = usoMaximo; }
+
+    public int getUsoAtual() { return usoAtual; }
+    public void setUsoAtual(int usoAtual) { this.usoAtual = usoAtual; }
+
+    public LocalDateTime getDataExpiracao() { return dataExpiracao; }
+    public void setDataExpiracao(LocalDateTime dataExpiracao) { this.dataExpiracao = dataExpiracao; }
 
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }

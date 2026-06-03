@@ -1,6 +1,7 @@
 package com.lfclothing.lfclothing.controller;
 
 import com.lfclothing.lfclothing.model.Cupom;
+import com.lfclothing.lfclothing.model.TipoCupom;
 import com.lfclothing.lfclothing.repository.CupomRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,6 +61,7 @@ public class CupomController {
         }
 
         return cupomRepository.findByCodigoAndAtivoTrue(codigo)
+                .filter(Cupom::isValido)
                 .map(cupom -> ResponseEntity.ok(Map.of(
                         "codigo", cupom.getCodigo(),
                         "tipo", cupom.getTipo().name(),

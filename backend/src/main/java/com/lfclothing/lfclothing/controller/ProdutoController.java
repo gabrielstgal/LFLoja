@@ -35,6 +35,10 @@ public class ProdutoController {
             "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"
     );
 
+    private static final Set<String> CAMPOS_ORDENACAO_PERMITIDOS = Set.of(
+            "id", "nome", "preco", "categoria", "quantidadeEstoque", "precoPromocional"
+    );
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/upload-imagem")
     public ResponseEntity<?> uploadImagem(@RequestParam("arquivo") MultipartFile arquivo) {
@@ -61,8 +65,12 @@ public class ProdutoController {
     }
 
     @GetMapping
-    public List<Produto> listarTodos() {
-        return produtoRepository.findAll();
+    public Page<Produto> listarTodos(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamanho) {
+        int tamanhoPaginacao = Math.min(tamanho, 100);
+        Pageable pageable = PageRequest.of(pagina, tamanhoPaginacao, Sort.by(Sort.Direction.DESC, "id"));
+        return produtoRepository.findAll(pageable);
     }
 
     @GetMapping("/buscar")
@@ -76,6 +84,9 @@ public class ProdutoController {
 
         Sort.Direction direcao = ordenar.length > 1 ? Sort.Direction.fromString(ordenar[1]) : Sort.Direction.DESC;
         String ordenarPor = ordenar.length > 0 ? ordenar[0] : "id";
+        if (!CAMPOS_ORDENACAO_PERMITIDOS.contains(ordenarPor)) {
+            ordenarPor = "id";
+        }
         int tamanhoPaginacao = Math.min(tamanho, 100);
         Pageable pageable = PageRequest.of(pagina, tamanhoPaginacao, Sort.by(direcao, ordenarPor));
 
@@ -129,17 +140,20 @@ public class ProdutoController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<Produto> atualizarProduto(@PathVariable Long id, @RequestBody Produto detalhesProduto) {
+    public ResponseEntity<?> atualizarProduto(@PathVariable Long id, @RequestBody Produto detalhesProduto) {
         return produtoRepository.findById(id).map(produto -> {
-            produto.setNome(detalhesProduto.getNome());
-            produto.setDescricao(detalhesProduto.getDescricao());
-            produto.setCategoria(detalhesProduto.getCategoria());
+            produto.setNome(InputSanitizer.sanitizeText(detalhesProduto.getNome()));
+            produto.setDescricao(InputSanitizer.sanitizeHtml(detalhesProduto.getDescricao()));
+            produto.setCategoria(InputSanitizer.sanitizeText(detalhesProduto.getCategoria()));
             produto.setPreco(detalhesProduto.getPreco());
             produto.setPrecoPromocional(detalhesProduto.getPrecoPromocional());
+            if (!InputSanitizer.isValidUrl(detalhesProduto.getUrlImagem())) {
+                return ResponseEntity.badRequest().body((Object) Map.of("erro", "URL da imagem invalida."));
+            }
             produto.setUrlImagem(detalhesProduto.getUrlImagem());
             produto.setImagens(detalhesProduto.getImagens());
             produto.setEstoqueTamanhos(detalhesProduto.getEstoqueTamanhos());
-            return ResponseEntity.ok(produtoRepository.save(produto));
+            return ResponseEntity.ok((Object) produtoRepository.save(produto));
         }).orElse(ResponseEntity.notFound().build());
     }
 

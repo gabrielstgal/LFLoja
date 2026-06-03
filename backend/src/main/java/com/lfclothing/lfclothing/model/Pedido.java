@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "pedidos")
+@Table(name = "pedidos", indexes = {
+    @Index(name = "idx_pedido_usuario", columnList = "usuario_id"),
+    @Index(name = "idx_pedido_data", columnList = "data_criacao")
+})
 public class Pedido {
 
     @Id
@@ -38,6 +41,12 @@ public class Pedido {
 
     @Column(name = "valor_desconto")
     private BigDecimal valorDesconto;
+
+    @Column(name = "metodo_pagamento")
+    private String metodoPagamento;
+
+    @Column(name = "parcelas")
+    private Integer parcelas;
 
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
@@ -101,4 +110,10 @@ public class Pedido {
 
     public BigDecimal getValorDesconto() { return valorDesconto; }
     public void setValorDesconto(BigDecimal valorDesconto) { this.valorDesconto = valorDesconto; }
+
+    public String getMetodoPagamento() { return metodoPagamento; }
+    public void setMetodoPagamento(String metodoPagamento) { this.metodoPagamento = metodoPagamento; }
+
+    public Integer getParcelas() { return parcelas; }
+    public void setParcelas(Integer parcelas) { this.parcelas = parcelas; }
 }

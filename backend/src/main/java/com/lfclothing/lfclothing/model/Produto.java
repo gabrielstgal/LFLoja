@@ -2,11 +2,14 @@ package com.lfclothing.lfclothing.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.math.BigDecimal;
 import java.util.*;
 
 @Entity
-@Table(name = "produtos")
+@Table(name = "produtos", indexes = {
+    @Index(name = "idx_produto_categoria", columnList = "categoria")
+})
 public class Produto {
 
     @Id
@@ -40,12 +43,14 @@ public class Produto {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "imagens_produto", joinColumns = @JoinColumn(name = "produto_id"))
     @Column(name = "url")
+    @BatchSize(size = 50)
     private Set<String> imagens = new HashSet<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "estoque_tamanho", joinColumns = @JoinColumn(name = "produto_id"))
     @MapKeyColumn(name = "tamanho")
     @Column(name = "quantidade")
+    @BatchSize(size = 50)
     private Map<String, Integer> estoqueTamanhos = new LinkedHashMap<>();
 
     public Produto() {}

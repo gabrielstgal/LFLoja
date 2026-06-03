@@ -7,10 +7,23 @@ export const meusPedidos = () =>
     return data;
   });
 
-export const todosPedidos = () =>
-  api.get('/pedidos/todos').then(res =>
-    Array.isArray(res.data) ? res.data : []
-  );
+export const todosPedidos = async () => {
+  const allOrders = [];
+  let pagina = 0;
+  let totalPages = 1;
+  while (pagina < totalPages) {
+    const res = await api.get(`/pedidos/todos?pagina=${pagina}&tamanho=200`);
+    const data = res.data;
+    if (data.content) {
+      allOrders.push(...data.content);
+      totalPages = data.totalPages;
+    } else if (Array.isArray(data)) {
+      return data;
+    }
+    pagina++;
+  }
+  return allOrders;
+};
 
 export const checkout = (payload) =>
   api.post('/pedidos/checkout', payload).then(res => res.data);

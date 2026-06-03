@@ -9,6 +9,10 @@ import com.lfclothing.lfclothing.repository.UsuarioRepository;
 import com.lfclothing.lfclothing.repository.EnderecoRepository;
 import com.lfclothing.lfclothing.security.UserDetailsImpl;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,6 +24,7 @@ import com.lfclothing.lfclothing.security.InputSanitizer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pedidos")
@@ -46,28 +51,61 @@ public class PedidoController {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         Usuario usuario = usuarioRepository.findById(userDetails.getId()).orElseThrow();
 
+        if (requisicao.itens().size() > 50) {
+            return ResponseEntity.badRequest().body("Maximo de 50 itens por pedido.");
+        }
+
         BigDecimal total = BigDecimal.ZERO;
         Pedido pedido = new Pedido(usuario, total, StatusPedido.PENDENTE);
 
         if (requisicao.rua() != null && !requisicao.rua().isEmpty()) {
-            Endereco enderecoEntrega = new Endereco(usuario, requisicao.rua(), requisicao.numero(), requisicao.complemento(), requisicao.bairro(), requisicao.cidade(), requisicao.estado(), requisicao.cep());
+            Endereco enderecoEntrega = new Endereco(usuario,
+                    InputSanitizer.sanitizeText(requisicao.rua()),
+                    InputSanitizer.sanitizeText(requisicao.numero()),
+                    InputSanitizer.sanitizeText(requisicao.complemento()),
+                    InputSanitizer.sanitizeText(requisicao.bairro()),
+                    InputSanitizer.sanitizeText(requisicao.cidade()),
+                    InputSanitizer.sanitizeText(requisicao.estado()),
+                    InputSanitizer.sanitizeText(requisicao.cep()));
             enderecoRepository.save(enderecoEntrega);
             pedido.setEnderecoEntrega(enderecoEntrega);
-        }
-
-        if (requisicao.itens().size() > 50) {
-            return ResponseEntity.badRequest().body("Maximo de 50 itens por pedido.");
         }
 
         for (ItemPedidoRequisicao itemReq : requisicao.itens()) {
             int quantidade = InputSanitizer.clampQuantity(itemReq.quantidade(), 99);
             Produto produto = produtoRepository.findById(itemReq.produtoId())
-                    .orElseThrow(() -> new RuntimeException("Produto nao encontrado: " + itemReq.produtoId()));
+                    .orElse(null);
+
+            if (produto == null) {
+                return ResponseEntity.badRequest().body("Produto nao encontrado. Atualize seu carrinho.");
+            }
+
+            // Validar estoque no checkout
+            String tamanho = itemReq.tamanho();
+            boolean temTamanhos = produto.getEstoqueTamanhos() != null && !produto.getEstoqueTamanhos().isEmpty();
+
+            if (temTamanhos) {
+                if (tamanho == null || tamanho.isBlank()) {
+                    return ResponseEntity.badRequest().body("Selecione um tamanho para: " + produto.getNome());
+                }
+                int disponivel = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
+                if (disponivel < quantidade) {
+                    return ResponseEntity.badRequest().body(
+                            "Estoque insuficiente para " + produto.getNome()
+                            + " (tam: " + tamanho + ", disponivel: " + disponivel + ").");
+                }
+            } else {
+                if (produto.getQuantidadeEstoque() < quantidade) {
+                    return ResponseEntity.badRequest().body(
+                            "Estoque insuficiente para " + produto.getNome()
+                            + " (disponivel: " + produto.getQuantidadeEstoque() + ").");
+                }
+            }
 
             BigDecimal precoUnitario = (produto.getPrecoPromocional() != null && produto.getPrecoPromocional().compareTo(produto.getPreco()) < 0)
                     ? produto.getPrecoPromocional() : produto.getPreco();
 
-            ItemPedido itemPedido = new ItemPedido(pedido, produto, quantidade, precoUnitario, itemReq.tamanho());
+            ItemPedido itemPedido = new ItemPedido(pedido, produto, quantidade, precoUnitario, tamanho);
             pedido.adicionarItem(itemPedido);
 
             BigDecimal itemTotal = precoUnitario.multiply(BigDecimal.valueOf(quantidade));
@@ -76,9 +114,10 @@ public class PedidoController {
 
         // Aplicar cupom se fornecido
         BigDecimal valorDesconto = BigDecimal.ZERO;
+        String cupomStatus = null;
         if (requisicao.cupom() != null && !requisicao.cupom().isBlank()) {
             var cupomOpt = cupomRepository.findByCodigoAndAtivoTrue(requisicao.cupom().toUpperCase().trim());
-            if (cupomOpt.isPresent()) {
+            if (cupomOpt.isPresent() && cupomOpt.get().isValido()) {
                 Cupom cupom = cupomOpt.get();
                 if (cupom.getTipo() == TipoCupom.PERCENTUAL) {
                     valorDesconto = total.multiply(cupom.getValor()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
@@ -87,18 +126,36 @@ public class PedidoController {
                 }
                 pedido.setCupomCodigo(cupom.getCodigo());
                 pedido.setValorDesconto(valorDesconto);
+                cupom.incrementarUso();
+                cupomRepository.save(cupom);
+                cupomStatus = "APLICADO";
+            } else {
+                cupomStatus = "INVALIDO";
             }
         }
 
         pedido.setValorTotal(total.subtract(valorDesconto).max(BigDecimal.ZERO));
+
+        // Salvar metodo de pagamento
+        if (requisicao.metodoPagamento() != null && !requisicao.metodoPagamento().isBlank()) {
+            pedido.setMetodoPagamento(InputSanitizer.sanitizeText(requisicao.metodoPagamento()));
+        }
+        if (requisicao.parcelas() != null && requisicao.parcelas() >= 1 && requisicao.parcelas() <= 12) {
+            pedido.setParcelas(requisicao.parcelas());
+        }
+
         pedidoRepository.saveAndFlush(pedido);
 
-        return ResponseEntity.ok(java.util.Map.of(
-                "id", pedido.getId(),
-                "protocolo", pedido.getProtocolo(),
-                "valorTotal", pedido.getValorTotal(),
-                "status", pedido.getStatus().name()
-        ));
+        var response = new java.util.LinkedHashMap<String, Object>();
+        response.put("id", pedido.getId());
+        response.put("protocolo", pedido.getProtocolo());
+        response.put("valorTotal", pedido.getValorTotal());
+        response.put("status", pedido.getStatus().name());
+        if (cupomStatus != null) {
+            response.put("cupomStatus", cupomStatus);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
@@ -111,61 +168,100 @@ public class PedidoController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/todos")
-    public ResponseEntity<List<Pedido>> todosPedidos() {
-        return ResponseEntity.ok(pedidoRepository.findAllWithDetails());
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<Pedido>> todosPedidos(
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "50") int tamanho) {
+        int tamanhoPaginacao = Math.min(tamanho, 200);
+        Pageable pageable = PageRequest.of(pagina, tamanhoPaginacao, Sort.by(Sort.Direction.DESC, "dataCriacao"));
+        return ResponseEntity.ok(pedidoRepository.findAllWithDetails(pageable));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/status")
     @Transactional
-    public ResponseEntity<?> atualizarStatusPedido(@PathVariable Long id, @RequestBody java.util.Map<String, String> body) {
-        Pedido pedido = pedidoRepository.findByIdWithDetails(id).orElseThrow(() -> new RuntimeException("Pedido nao encontrado."));
+    public ResponseEntity<?> atualizarStatusPedido(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Pedido pedido = pedidoRepository.findByIdWithDetails(id).orElse(null);
+        if (pedido == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        StatusPedido statusAnterior = pedido.getStatus();
+        StatusPedido novoStatus;
         try {
-            StatusPedido statusAnterior = pedido.getStatus();
-            StatusPedido novoStatus = StatusPedido.valueOf(body.get("status"));
-
-            // Ao confirmar pagamento (PENDENTE -> PAGO), desconta estoque por tamanho
-            if (statusAnterior == StatusPedido.PENDENTE && novoStatus == StatusPedido.PAGO) {
-                for (ItemPedido item : pedido.getItens()) {
-                    Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
-                            .orElseThrow(() -> new RuntimeException("Produto nao encontrado."));
-
-                    String tamanho = item.getTamanho();
-                    if (tamanho != null && !tamanho.isBlank()) {
-                        int disponivel = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
-                        if (disponivel < item.getQuantidade()) {
-                            return ResponseEntity.badRequest()
-                                    .body("Estoque insuficiente para: " + produto.getNome()
-                                            + " (tam: " + tamanho + ", disponivel: " + disponivel
-                                            + ", necessario: " + item.getQuantidade() + ")");
-                        }
-                        produto.getEstoqueTamanhos().put(tamanho, disponivel - item.getQuantidade());
-                    }
-                    produto.recalcularEstoqueTotal();
-                    produtoRepository.save(produto);
-                }
-            }
-
-            // Ao cancelar um pedido que ja foi pago, restaura estoque por tamanho
-            if (statusAnterior == StatusPedido.PAGO && novoStatus == StatusPedido.CANCELADO) {
-                for (ItemPedido item : pedido.getItens()) {
-                    Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
-                            .orElseThrow(() -> new RuntimeException("Produto nao encontrado."));
-                    String tamanho = item.getTamanho();
-                    if (tamanho != null && !tamanho.isBlank()) {
-                        int atual = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
-                        produto.getEstoqueTamanhos().put(tamanho, atual + item.getQuantidade());
-                    }
-                    produto.recalcularEstoqueTotal();
-                    produtoRepository.save(produto);
-                }
-            }
-
-            pedido.setStatus(novoStatus);
-            pedidoRepository.save(pedido);
-            return ResponseEntity.ok(pedido);
-        } catch (IllegalArgumentException e) {
+            novoStatus = StatusPedido.valueOf(body.get("status"));
+        } catch (IllegalArgumentException | NullPointerException e) {
             return ResponseEntity.badRequest().body("Status invalido.");
         }
+
+        // Validar transicao de status
+        if (!statusAnterior.podeTransicionar(novoStatus)) {
+            return ResponseEntity.badRequest().body(
+                    "Transicao nao permitida: " + statusAnterior + " -> " + novoStatus + ".");
+        }
+
+        // Ao confirmar pagamento (PENDENTE -> PAGO), desconta estoque
+        if (statusAnterior == StatusPedido.PENDENTE && novoStatus == StatusPedido.PAGO) {
+            for (ItemPedido item : pedido.getItens()) {
+                Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
+                        .orElse(null);
+                if (produto == null) {
+                    return ResponseEntity.badRequest().body("Produto nao encontrado: " + item.getProduto().getId());
+                }
+
+                String tamanho = item.getTamanho();
+                boolean temTamanhos = produto.getEstoqueTamanhos() != null && !produto.getEstoqueTamanhos().isEmpty();
+
+                if (temTamanhos && tamanho != null && !tamanho.isBlank()) {
+                    int disponivel = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
+                    if (disponivel < item.getQuantidade()) {
+                        return ResponseEntity.badRequest()
+                                .body("Estoque insuficiente para: " + produto.getNome()
+                                        + " (tam: " + tamanho + ", disponivel: " + disponivel
+                                        + ", necessario: " + item.getQuantidade() + ")");
+                    }
+                    produto.getEstoqueTamanhos().put(tamanho, disponivel - item.getQuantidade());
+                    produto.recalcularEstoqueTotal();
+                } else if (!temTamanhos) {
+                    int estoqueAtual = produto.getQuantidadeEstoque();
+                    if (estoqueAtual < item.getQuantidade()) {
+                        return ResponseEntity.badRequest()
+                                .body("Estoque insuficiente para: " + produto.getNome()
+                                        + " (disponivel: " + estoqueAtual
+                                        + ", necessario: " + item.getQuantidade() + ")");
+                    }
+                    produto.setQuantidadeEstoque(estoqueAtual - item.getQuantidade());
+                }
+
+                produtoRepository.save(produto);
+            }
+        }
+
+        // Ao cancelar um pedido pago ou enviado, restaura estoque
+        if ((statusAnterior == StatusPedido.PAGO || statusAnterior == StatusPedido.ENVIADO)
+                && novoStatus == StatusPedido.CANCELADO) {
+            for (ItemPedido item : pedido.getItens()) {
+                Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
+                        .orElse(null);
+                if (produto == null) continue;
+
+                String tamanho = item.getTamanho();
+                boolean temTamanhos = produto.getEstoqueTamanhos() != null && !produto.getEstoqueTamanhos().isEmpty();
+
+                if (temTamanhos && tamanho != null && !tamanho.isBlank()) {
+                    int atual = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
+                    produto.getEstoqueTamanhos().put(tamanho, atual + item.getQuantidade());
+                    produto.recalcularEstoqueTotal();
+                } else if (!temTamanhos) {
+                    produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + item.getQuantidade());
+                }
+
+                produtoRepository.save(produto);
+            }
+        }
+
+        pedido.setStatus(novoStatus);
+        pedidoRepository.save(pedido);
+        return ResponseEntity.ok(pedido);
     }
 }

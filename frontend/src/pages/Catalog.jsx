@@ -81,7 +81,7 @@ const Catalog = () => {
               max="1000"
               step="10"
               value={precoMin}
-              onChange={e => { const v = Number(e.target.value); setPrecoMin(v > precoMax ? precoMax : v); }}
+              onChange={e => { const v = Number(e.target.value); setPrecoMin(v > precoMax ? precoMax : v); setPage(0); }}
               className="catalog-price-range"
             />
             <label className="catalog-price-range-label">Máximo</label>
@@ -91,7 +91,7 @@ const Catalog = () => {
               max="1000"
               step="10"
               value={precoMax}
-              onChange={e => { const v = Number(e.target.value); setPrecoMax(v < precoMin ? precoMin : v); }}
+              onChange={e => { const v = Number(e.target.value); setPrecoMax(v < precoMin ? precoMin : v); setPage(0); }}
               className="catalog-price-range"
             />
             <div className="catalog-price-labels">
@@ -105,7 +105,7 @@ const Catalog = () => {
 
       <div className="catalog-main">
         <div className="catalog-header">
-          <h2>Categorias ({totalElements})</h2>
+          <h2>Produtos ({totalElements})</h2>
           <form onSubmit={handleSearch} className="catalog-search-form-inline">
             <input
               type="text"
@@ -138,7 +138,7 @@ const Catalog = () => {
             </div>
             <div className="catalog-pagination">
               <button className="btn-primary" disabled={page === 0} onClick={() => setPage(p => p - 1)}>Anterior</button>
-              <button className="btn-primary" disabled={products.length < 12} onClick={() => setPage(p => p + 1)}>Próxima</button>
+              <button className="btn-primary" disabled={products.length < 12 || filteredProducts.length === 0} onClick={() => setPage(p => p + 1)}>Próxima</button>
             </div>
           </>
         )}

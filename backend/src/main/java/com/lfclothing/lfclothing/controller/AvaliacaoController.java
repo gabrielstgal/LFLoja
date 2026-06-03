@@ -4,6 +4,7 @@ import com.lfclothing.lfclothing.model.Avaliacao;
 import com.lfclothing.lfclothing.model.Produto;
 import com.lfclothing.lfclothing.model.Usuario;
 import com.lfclothing.lfclothing.repository.AvaliacaoRepository;
+import com.lfclothing.lfclothing.repository.PedidoRepository;
 import com.lfclothing.lfclothing.repository.ProdutoRepository;
 import com.lfclothing.lfclothing.repository.UsuarioRepository;
 import com.lfclothing.lfclothing.security.UserDetailsImpl;
@@ -24,11 +25,13 @@ public class AvaliacaoController {
     private final AvaliacaoRepository avaliacaoRepository;
     private final ProdutoRepository produtoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final PedidoRepository pedidoRepository;
 
-    public AvaliacaoController(AvaliacaoRepository avaliacaoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository) {
+    public AvaliacaoController(AvaliacaoRepository avaliacaoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, PedidoRepository pedidoRepository) {
         this.avaliacaoRepository = avaliacaoRepository;
         this.produtoRepository = produtoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.pedidoRepository = pedidoRepository;
     }
 
     @GetMapping("/produto/{produtoId}")
@@ -53,7 +56,16 @@ public class AvaliacaoController {
             return ResponseEntity.badRequest().body(Map.of("erro", "Voce ja avaliou este produto."));
         }
 
-        int nota = ((Number) body.get("nota")).intValue();
+        // Verificar se o usuario comprou este produto (pedido PAGO, ENVIADO ou ENTREGUE)
+        if (!pedidoRepository.existsByUsuarioIdAndProdutoId(userDetails.getId(), produtoId)) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Voce precisa ter comprado este produto para avaliar."));
+        }
+
+        Object notaObj = body.get("nota");
+        if (notaObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "A nota e obrigatoria."));
+        }
+        int nota = ((Number) notaObj).intValue();
         if (nota < 1 || nota > 5) {
             return ResponseEntity.badRequest().body(Map.of("erro", "A nota deve ser entre 1 e 5."));
         }

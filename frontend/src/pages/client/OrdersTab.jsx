@@ -49,7 +49,7 @@ const OrdersTab = ({ orders }) => {
               <div className="client-order-header">
                 <span className="client-order-protocolo">{order.protocolo || `#${order.id}`}</span>
                 <span className="client-order-date">{formatDate(order.dataCriacao)}</span>
-                <span className="client-order-total">R$ {order.valorTotal.toFixed(2)}</span>
+                <span className="client-order-total">R$ {(order.valorTotal || 0).toFixed(2)}</span>
                 <span className={`client-order-status ${getClientStatusClass(order.status)}`}>
                   {STATUS_LABELS[order.status] || order.status}
                 </span>
@@ -66,7 +66,7 @@ const OrdersTab = ({ orders }) => {
                     <div className="client-order-item-info">
                       <span className="client-order-item-name">{item.produto?.nome || 'Produto Não Disponível'}</span>
                       <span className="client-order-item-detail">
-                        {item.tamanho ? `Tam: ${item.tamanho} | ` : ''}Qtd: {item.quantidade} | R$ {item.preco.toFixed(2)}
+                        {item.tamanho ? `Tam: ${item.tamanho} | ` : ''}Qtd: {item.quantidade} | R$ {(item.preco || 0).toFixed(2)}
                       </span>
                     </div>
                   </div>

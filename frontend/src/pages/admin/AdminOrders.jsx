@@ -76,7 +76,7 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
                   </td>
                   <td>{new Date(o.dataCriacao).toLocaleDateString()}</td>
                   <td className="admin-order-value">
-                    R$ {o.valorTotal.toFixed(2)}
+                    R$ {(o.valorTotal || 0).toFixed(2)}
                     {o.cupomCodigo && (
                       <div style={{ fontSize: '0.75em', color: '#888' }}>
                         Cupom: {o.cupomCodigo} (-R$ {(o.valorDesconto || 0).toFixed(2)})
@@ -147,8 +147,16 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
                                 Cupom <strong>{o.cupomCodigo}</strong> — Desconto: <strong>-R$ {(o.valorDesconto || 0).toFixed(2)}</strong>
                               </div>
                             )}
+                            {o.metodoPagamento && (
+                              <div className="admin-order-detail-cupom">
+                                Pagamento: <strong>
+                                  {o.metodoPagamento === 'PIX' ? 'Pix' : o.metodoPagamento === 'DEBITO' ? 'Débito' : o.metodoPagamento === 'CREDITO' ? 'Crédito' : o.metodoPagamento}
+                                  {o.metodoPagamento === 'CREDITO' && o.parcelas > 1 && ` (${o.parcelas}x)`}
+                                </strong>
+                              </div>
+                            )}
                             <div className="admin-order-detail-total">
-                              Total: <strong>R$ {o.valorTotal.toFixed(2)}</strong>
+                              Total: <strong>R$ {(o.valorTotal || 0).toFixed(2)}</strong>
                             </div>
                           </div>
 
@@ -173,6 +181,13 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
           </tbody>
         </table>
         {orders.length === 0 && <div className="admin-table-empty">Nenhum pedido recebido ainda.</div>}
+        {orders.length > 0 && orders.filter(o => {
+          if (!searchOrder.trim()) return true;
+          const term = searchOrder.trim().toLowerCase();
+          return (o.protocolo || '').toLowerCase().includes(term)
+            || (o.usuario?.nome || '').toLowerCase().includes(term)
+            || (o.usuario?.email || '').toLowerCase().includes(term);
+        }).length === 0 && <div className="admin-table-empty">Nenhum pedido encontrado para esta busca.</div>}
       </div>
     </div>
   );

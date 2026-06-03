@@ -73,6 +73,8 @@ public class WebSecurityConfig {
                     .maxAgeInSeconds(31536000))
                 .permissionsPolicyHeader(permissions -> permissions
                     .policy("camera=(), microphone=(), geolocation=(), payment=()"))
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://res.cloudinary.com data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"))
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth ->

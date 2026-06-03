@@ -87,22 +87,29 @@ const Checkout = () => {
           tamanho: item.selectedSize || null,
         })),
         cupom: cupomAplicado || null,
+        metodoPagamento: paymentMethod,
+        parcelas: paymentMethod === 'CREDITO' ? parcelas : 1,
         ...address,
       };
 
       const data = await submitCheckout(payload);
       const protocolo = data.protocolo;
 
+      // Limpar carrinho IMEDIATAMENTE após sucesso do servidor, antes de qualquer outra coisa
+      clearCart();
+
+      if (data.cupomStatus === 'INVALIDO') {
+        toast.warn('O cupom informado não é mais válido. O pedido foi registrado sem desconto.');
+      }
+
       const mensagem = buildWhatsAppMessage(protocolo);
       const fone = telefoneLoja.replace(/\D/g, '').replace(/^0+/, '');
       const foneCompleto = fone.startsWith('55') ? fone : `55${fone}`;
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${foneCompleto}&text=${mensagem}`;
 
-      clearCart();
+      // Salvar URL do WhatsApp antes de navegar, para a página de sucesso poder usar
+      sessionStorage.setItem('lf-whatsapp-url', whatsappUrl);
       navigate('/pedido/enviado');
-
-      // Usar location.href para redirecionar — window.open é bloqueado como popup no mobile (especialmente iPhone)
-      window.location.href = whatsappUrl;
     } catch (err) {
       const msg = err.response?.data;
       toast.error(typeof msg === 'string' ? msg : msg?.erro || 'Erro ao registrar pedido. Tente novamente.');

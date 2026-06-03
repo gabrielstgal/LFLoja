@@ -76,15 +76,21 @@ const SideCart = () => {
                   <h4 className="item-name">{item.nome}</h4>
                   {item.tamanhos && item.tamanhos.length > 0 ? (
                     <div className="item-size-selector">
-                      {item.tamanhos.map(size => (
-                        <button
-                          key={size}
-                          className={`item-size-btn ${item.selectedSize === size ? 'item-size-btn-active' : ''}`}
-                          onClick={() => updateSize(item.cartId, size)}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                      {item.tamanhos.map(size => {
+                        const estoque = item.estoqueTamanhos?.[size] ?? 0;
+                        const esgotado = estoque <= 0 && item.selectedSize !== size;
+                        return (
+                          <button
+                            key={size}
+                            className={`item-size-btn ${item.selectedSize === size ? 'item-size-btn-active' : ''} ${esgotado ? 'item-size-btn-disabled' : ''}`}
+                            onClick={() => !esgotado && updateSize(item.cartId, size)}
+                            disabled={esgotado}
+                            title={esgotado ? 'Esgotado' : ''}
+                          >
+                            {size}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : null}
                   {hasPromo(item) ? (

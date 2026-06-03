@@ -2,6 +2,8 @@ package com.lfclothing.lfclothing.controller;
 
 import com.lfclothing.lfclothing.model.Categoria;
 import com.lfclothing.lfclothing.repository.CategoriaRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -21,12 +23,14 @@ public class CategoriaController {
     }
 
     @GetMapping
+    @Cacheable("categorias")
     public List<Categoria> listar() {
         return categoriaRepository.findAllByOrderByOrdemAsc();
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
+    @CacheEvict(value = "categorias", allEntries = true)
     public ResponseEntity<?> criar(@RequestBody Categoria categoria) {
         String nome = InputSanitizer.sanitizeText(categoria.getNome());
         if (nome == null || nome.isBlank()) {
@@ -41,12 +45,16 @@ public class CategoriaController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
+    @CacheEvict(value = "categorias", allEntries = true)
     public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody Categoria dados) {
         return categoriaRepository.findById(id).map(cat -> {
             if (dados.getNome() != null && !dados.getNome().trim().isEmpty()) {
-                cat.setNome(dados.getNome().trim());
+                cat.setNome(InputSanitizer.sanitizeText(dados.getNome()));
             }
             if (dados.getUrlImagem() != null) {
+                if (!InputSanitizer.isValidUrl(dados.getUrlImagem())) {
+                    return ResponseEntity.badRequest().body((Object) "URL da imagem invalida.");
+                }
                 cat.setUrlImagem(dados.getUrlImagem());
             }
             cat.setOrdem(dados.getOrdem());
@@ -56,6 +64,7 @@ public class CategoriaController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
+    @CacheEvict(value = "categorias", allEntries = true)
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         if (!categoriaRepository.existsById(id)) return ResponseEntity.notFound().build();
         categoriaRepository.deleteById(id);
