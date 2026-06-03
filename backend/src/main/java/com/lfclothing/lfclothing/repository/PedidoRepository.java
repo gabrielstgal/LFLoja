@@ -1,6 +1,7 @@
 package com.lfclothing.lfclothing.repository;
 
 import com.lfclothing.lfclothing.model.Pedido;
+import com.lfclothing.lfclothing.model.StatusPedido;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,8 +39,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Pedido p " +
            "JOIN p.itens i WHERE p.usuario.id = :usuarioId AND i.produto.id = :produtoId " +
-           "AND p.status IN (com.lfclothing.lfclothing.model.StatusPedido.PAGO, " +
-           "com.lfclothing.lfclothing.model.StatusPedido.ENVIADO, " +
-           "com.lfclothing.lfclothing.model.StatusPedido.ENTREGUE)")
-    boolean existsByUsuarioIdAndProdutoId(@Param("usuarioId") Long usuarioId, @Param("produtoId") Long produtoId);
+           "AND p.status IN :statuses")
+    boolean existsByUsuarioIdAndProdutoIdAndStatusIn(
+            @Param("usuarioId") Long usuarioId,
+            @Param("produtoId") Long produtoId,
+            @Param("statuses") java.util.Collection<StatusPedido> statuses);
 }

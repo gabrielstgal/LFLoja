@@ -28,8 +28,8 @@ public class Cupom {
     @Column(name = "uso_maximo")
     private Integer usoMaximo;
 
-    @Column(name = "uso_atual", nullable = false)
-    private int usoAtual = 0;
+    @Column(name = "uso_atual")
+    private Integer usoAtual = 0;
 
     @Column(name = "data_expiracao")
     private LocalDateTime dataExpiracao;
@@ -47,12 +47,12 @@ public class Cupom {
     public boolean isValido() {
         if (!ativo) return false;
         if (dataExpiracao != null && LocalDateTime.now().isAfter(dataExpiracao)) return false;
-        if (usoMaximo != null && usoAtual >= usoMaximo) return false;
+        if (usoMaximo != null && (usoAtual != null ? usoAtual : 0) >= usoMaximo) return false;
         return true;
     }
 
     public void incrementarUso() {
-        this.usoAtual++;
+        this.usoAtual = (this.usoAtual != null ? this.usoAtual : 0) + 1;
     }
 
     public Long getId() { return id; }
@@ -73,8 +73,8 @@ public class Cupom {
     public Integer getUsoMaximo() { return usoMaximo; }
     public void setUsoMaximo(Integer usoMaximo) { this.usoMaximo = usoMaximo; }
 
-    public int getUsoAtual() { return usoAtual; }
-    public void setUsoAtual(int usoAtual) { this.usoAtual = usoAtual; }
+    public Integer getUsoAtual() { return usoAtual; }
+    public void setUsoAtual(Integer usoAtual) { this.usoAtual = usoAtual; }
 
     public LocalDateTime getDataExpiracao() { return dataExpiracao; }
     public void setDataExpiracao(LocalDateTime dataExpiracao) { this.dataExpiracao = dataExpiracao; }

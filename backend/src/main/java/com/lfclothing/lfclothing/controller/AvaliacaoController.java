@@ -2,6 +2,7 @@ package com.lfclothing.lfclothing.controller;
 
 import com.lfclothing.lfclothing.model.Avaliacao;
 import com.lfclothing.lfclothing.model.Produto;
+import com.lfclothing.lfclothing.model.StatusPedido;
 import com.lfclothing.lfclothing.model.Usuario;
 import com.lfclothing.lfclothing.repository.AvaliacaoRepository;
 import com.lfclothing.lfclothing.repository.PedidoRepository;
@@ -57,7 +58,8 @@ public class AvaliacaoController {
         }
 
         // Verificar se o usuario comprou este produto (pedido PAGO, ENVIADO ou ENTREGUE)
-        if (!pedidoRepository.existsByUsuarioIdAndProdutoId(userDetails.getId(), produtoId)) {
+        var statusCompra = java.util.List.of(StatusPedido.PAGO, StatusPedido.ENVIADO, StatusPedido.ENTREGUE);
+        if (!pedidoRepository.existsByUsuarioIdAndProdutoIdAndStatusIn(userDetails.getId(), produtoId, statusCompra)) {
             return ResponseEntity.badRequest().body(Map.of("erro", "Voce precisa ter comprado este produto para avaliar."));
         }
 
