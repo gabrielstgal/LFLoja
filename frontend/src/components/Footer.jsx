@@ -21,9 +21,9 @@ const Footer = () => {
         <div>
           <h3 className="footer-section-title">Institucional</h3>
           <ul className="footer-list">
-            <li><span className="footer-link-disabled">Sobre a LF</span></li>
-            <li><span className="footer-link-disabled">Trocas e Devoluções</span></li>
-            <li><span className="footer-link-disabled">Termos de Uso</span></li>
+            <li><Link to="/politica-de-privacidade" className="footer-link">Politica de Privacidade</Link></li>
+            <li><Link to="/termos-de-uso" className="footer-link">Termos de Uso</Link></li>
+            <li><Link to="/trocas-e-devolucoes" className="footer-link">Trocas e Devoluções</Link></li>
           </ul>
         </div>
         <div>

@@ -42,12 +42,6 @@ public class Pedido {
     @Column(name = "valor_desconto")
     private BigDecimal valorDesconto;
 
-    @Column(name = "metodo_pagamento")
-    private String metodoPagamento;
-
-    @Column(name = "parcelas")
-    private Integer parcelas;
-
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
@@ -111,9 +105,4 @@ public class Pedido {
     public BigDecimal getValorDesconto() { return valorDesconto; }
     public void setValorDesconto(BigDecimal valorDesconto) { this.valorDesconto = valorDesconto; }
 
-    public String getMetodoPagamento() { return metodoPagamento; }
-    public void setMetodoPagamento(String metodoPagamento) { this.metodoPagamento = metodoPagamento; }
-
-    public Integer getParcelas() { return parcelas; }
-    public void setParcelas(Integer parcelas) { this.parcelas = parcelas; }
 }

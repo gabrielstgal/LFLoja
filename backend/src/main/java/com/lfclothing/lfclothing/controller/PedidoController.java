@@ -136,14 +136,6 @@ public class PedidoController {
 
         pedido.setValorTotal(total.subtract(valorDesconto).max(BigDecimal.ZERO));
 
-        // Salvar metodo de pagamento
-        if (requisicao.metodoPagamento() != null && !requisicao.metodoPagamento().isBlank()) {
-            pedido.setMetodoPagamento(InputSanitizer.sanitizeText(requisicao.metodoPagamento()));
-        }
-        if (requisicao.parcelas() != null && requisicao.parcelas() >= 1 && requisicao.parcelas() <= 12) {
-            pedido.setParcelas(requisicao.parcelas());
-        }
-
         pedidoRepository.saveAndFlush(pedido);
 
         var response = new java.util.LinkedHashMap<String, Object>();

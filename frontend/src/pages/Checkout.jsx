@@ -87,8 +87,6 @@ const Checkout = () => {
           tamanho: item.selectedSize || null,
         })),
         cupom: cupomAplicado || null,
-        metodoPagamento: paymentMethod,
-        parcelas: paymentMethod === 'CREDITO' ? parcelas : 1,
         ...address,
       };
 
@@ -237,6 +235,21 @@ const Checkout = () => {
               Crédito
             </button>
           </div>
+
+          {paymentMethod === 'CREDITO' && (
+            <div className="checkout-parcelas">
+              <label className="checkout-parcelas-label">Parcelas desejadas</label>
+              <select
+                value={parcelas}
+                onChange={(e) => setParcelas(Number(e.target.value))}
+                className="checkout-input"
+              >
+                {parcelasOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {paymentMethod === 'CREDITO' && (
             <div className="checkout-parcelas">

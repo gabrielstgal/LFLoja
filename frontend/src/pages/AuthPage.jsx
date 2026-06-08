@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import './AuthPage.css';
 
@@ -32,6 +32,7 @@ const AuthPage = () => {
   const [senha, setSenha] = useState('');
   const [nome, setNome] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aceitouTermos, setAceitouTermos] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem('lf-session-expired')) {
@@ -48,6 +49,10 @@ const AuthPage = () => {
     }
     if (!isLogin && !nome.trim()) {
       toast.error('Digite seu nome.');
+      return;
+    }
+    if (!isLogin && !aceitouTermos) {
+      toast.error('Voce precisa aceitar os Termos de Uso e a Politica de Privacidade.');
       return;
     }
     if (senha.length < 8) {
@@ -104,7 +109,14 @@ const AuthPage = () => {
             <input type="password" placeholder="Sua senha" value={senha} onChange={e => setSenha(e.target.value)} required minLength="8" className="auth-input" />
           </div>
 
-          <button type="submit" className="btn-primary auth-submit" disabled={loading}>
+          {!isLogin && (
+            <label className="auth-terms-label">
+              <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)} className="auth-terms-checkbox" />
+              <span>Li e aceito os <Link to="/termos-de-uso" target="_blank" className="auth-terms-link">Termos de Uso</Link> e a <Link to="/politica-de-privacidade" target="_blank" className="auth-terms-link">Politica de Privacidade</Link></span>
+            </label>
+          )}
+
+          <button type="submit" className="btn-primary auth-submit" disabled={loading || (!isLogin && !aceitouTermos)}>
             {loading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar conta'}
           </button>
         </form>

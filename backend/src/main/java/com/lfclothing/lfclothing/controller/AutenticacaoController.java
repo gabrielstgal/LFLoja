@@ -169,6 +169,41 @@ public class AutenticacaoController {
         return ResponseEntity.ok("Se este email nao estiver cadastrado, sua conta foi criada. Tente fazer login.");
     }
 
+    @DeleteMapping("/excluir-conta")
+    public ResponseEntity<?> excluirConta(@RequestBody Map<String, String> dados, Authentication authentication,
+                                           HttpServletResponse response) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("Nao autenticado.");
+        }
+
+        String senha = dados.get("senha");
+        if (senha == null || senha.isEmpty()) {
+            return ResponseEntity.badRequest().body("Senha e obrigatoria para confirmar a exclusao.");
+        }
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Usuario usuario = usuarioRepository.findByEmail(userDetails.getEmail()).orElse(null);
+        if (usuario == null) {
+            return ResponseEntity.status(404).body("Usuario nao encontrado.");
+        }
+
+        if (!encoder.matches(senha, usuario.getSenha())) {
+            return ResponseEntity.badRequest().body("Senha incorreta.");
+        }
+
+        // Anonimiza dados pessoais (LGPD) - mantém registro para fins fiscais
+        String anonId = "deleted_" + usuario.getId();
+        usuario.setNome("Usuario Removido");
+        usuario.setEmail(anonId + "@deleted.local");
+        usuario.setSenha(encoder.encode(java.util.UUID.randomUUID().toString()));
+        usuarioRepository.save(usuario);
+
+        logger.info("Conta anonimizada (LGPD): userId={}", usuario.getId());
+
+        jwtUtils.clearAuthCookies(response);
+        return ResponseEntity.ok("Conta excluida com sucesso. Seus dados pessoais foram removidos.");
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/registrar-admin")
     public ResponseEntity<?> registrarAdmin(@Valid @RequestBody CadastroRequisicao cadastroRequisicao) {

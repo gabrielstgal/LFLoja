@@ -16,7 +16,5 @@ public record PedidoRequisicao(
         @Size(max = 100) String bairro,
         @Size(max = 100) String cidade,
         @Size(max = 2) String estado,
-        @Size(max = 9) String cep,
-        @Size(max = 20) String metodoPagamento,
-        Integer parcelas
+        @Size(max = 9) String cep
 ) {}

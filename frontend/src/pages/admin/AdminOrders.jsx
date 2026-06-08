@@ -147,14 +147,6 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
                                 Cupom <strong>{o.cupomCodigo}</strong> — Desconto: <strong>-R$ {(o.valorDesconto || 0).toFixed(2)}</strong>
                               </div>
                             )}
-                            {o.metodoPagamento && (
-                              <div className="admin-order-detail-cupom">
-                                Pagamento: <strong>
-                                  {o.metodoPagamento === 'PIX' ? 'Pix' : o.metodoPagamento === 'DEBITO' ? 'Débito' : o.metodoPagamento === 'CREDITO' ? 'Crédito' : o.metodoPagamento}
-                                  {o.metodoPagamento === 'CREDITO' && o.parcelas > 1 && ` (${o.parcelas}x)`}
-                                </strong>
-                              </div>
-                            )}
                             <div className="admin-order-detail-total">
                               Total: <strong>R$ {(o.valorTotal || 0).toFixed(2)}</strong>
                             </div>

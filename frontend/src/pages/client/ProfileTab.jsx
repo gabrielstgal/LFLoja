@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const ProfileTab = ({ user }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const [nome, setNome] = useState(user?.nome || '');
   const [email] = useState(user?.email || '');
   const [senhaAtual, setSenhaAtual] = useState('');
@@ -71,6 +75,33 @@ const ProfileTab = ({ user }) => {
             {salvando ? 'Salvando...' : 'Salvar Alterações'}
           </button>
         </form>
+      </div>
+
+      <div className="client-dados-card client-danger-zone">
+        <h3 className="client-danger-title">Excluir Conta</h3>
+        <p className="client-danger-text">
+          Ao excluir sua conta, todos os seus dados pessoais serao removidos permanentemente.
+          Seus pedidos serao anonimizados conforme a LGPD. Esta acao nao pode ser desfeita.
+        </p>
+        <button
+          className="btn-danger client-danger-btn"
+          onClick={async () => {
+            if (!window.confirm('Tem certeza que deseja excluir sua conta? Esta acao e irreversivel.')) return;
+            const senha = window.prompt('Digite sua senha para confirmar:');
+            if (!senha) return;
+            try {
+              await api.delete('/autenticacao/excluir-conta', { data: { senha } });
+              toast.success('Conta excluida com sucesso.');
+              logout();
+              navigate('/');
+            } catch (err) {
+              const msg = err.response?.data;
+              toast.error(typeof msg === 'string' ? msg : msg?.erro || 'Erro ao excluir conta.');
+            }
+          }}
+        >
+          Excluir minha conta
+        </button>
       </div>
     </>
   );
