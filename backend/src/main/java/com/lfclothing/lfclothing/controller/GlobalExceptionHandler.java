@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         String mensagem = ex.getMessage();
-        if (mensagem != null && MENSAGENS_SEGURAS.stream().anyMatch(mensagem::startsWith)) {
+        if (mensagem != null && MENSAGENS_SEGURAS.contains(mensagem)) {
             return buildResponse(HttpStatus.BAD_REQUEST, mensagem);
         }
         logger.error("RuntimeException nao tratada: ", ex);

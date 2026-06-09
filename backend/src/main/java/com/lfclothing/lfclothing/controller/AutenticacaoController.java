@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.lfclothing.lfclothing.security.InputSanitizer;
+import com.lfclothing.lfclothing.service.RefreshTokenService;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,13 +39,15 @@ public class AutenticacaoController {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
+    private final RefreshTokenService refreshTokenService;
 
     public AutenticacaoController(AuthenticationManager authenticationManager, UsuarioRepository usuarioRepository,
-                          PasswordEncoder encoder, JwtUtils jwtUtils) {
+                          PasswordEncoder encoder, JwtUtils jwtUtils, RefreshTokenService refreshTokenService) {
         this.authenticationManager = authenticationManager;
         this.usuarioRepository = usuarioRepository;
         this.encoder = encoder;
         this.jwtUtils = jwtUtils;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @PostMapping("/login")
@@ -60,7 +64,9 @@ public class AutenticacaoController {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
-        jwtUtils.setAuthCookies(response, userDetails.getEmail());
+        String refreshJwt = jwtUtils.setAuthCookies(response, userDetails.getEmail());
+        Instant expiracao = Instant.now().plusMillis(jwtUtils.getRefreshExpirationMs());
+        refreshTokenService.salvar(refreshJwt, userDetails.getEmail(), expiracao);
 
         return ResponseEntity.ok(new JwtResposta(
                 userDetails.getId(),
@@ -70,6 +76,7 @@ public class AutenticacaoController {
     }
 
     @PostMapping("/refresh")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = jwtUtils.getTokenFromCookie(request, JwtUtils.REFRESH_COOKIE);
 
@@ -78,14 +85,34 @@ public class AutenticacaoController {
             return ResponseEntity.status(401).body("Sessao expirada. Faca login novamente.");
         }
 
+        // Valida se o token existe no banco e nao foi revogado
+        var tokenValido = refreshTokenService.validar(refreshToken);
+        if (tokenValido.isEmpty()) {
+            // Token valido pelo JWT mas revogado no banco — possivel roubo de token
+            String email = jwtUtils.getUserNameFromJwtToken(refreshToken);
+            refreshTokenService.revogarTodos(email);
+            logger.warn("Refresh token reutilizado (possivel roubo) para: {}", email);
+            jwtUtils.clearAuthCookies(response);
+            return ResponseEntity.status(401).body("Sessao invalidada por seguranca. Faca login novamente.");
+        }
+
         String email = jwtUtils.getUserNameFromJwtToken(refreshToken);
-        jwtUtils.setAuthCookies(response, email);
+        String novoRefreshJwt = jwtUtils.setAuthCookies(response, email);
+        Instant expiracao = Instant.now().plusMillis(jwtUtils.getRefreshExpirationMs());
+        refreshTokenService.rotacionar(refreshToken, novoRefreshJwt, email, expiracao);
 
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        // Revoga todos os refresh tokens do usuario
+        String refreshToken = jwtUtils.getTokenFromCookie(request, JwtUtils.REFRESH_COOKIE);
+        if (refreshToken != null && jwtUtils.validateJwtToken(refreshToken)) {
+            String email = jwtUtils.getUserNameFromJwtToken(refreshToken);
+            refreshTokenService.revogarTodos(email);
+        }
         jwtUtils.clearAuthCookies(response);
         return ResponseEntity.ok("Logout realizado com sucesso.");
     }
@@ -130,6 +157,9 @@ public class AutenticacaoController {
         String senhaAtual = dados.get("senhaAtual");
         String novaSenha = dados.get("novaSenha");
         if (senhaAtual != null && novaSenha != null && !senhaAtual.isEmpty() && !novaSenha.isEmpty()) {
+            if (senhaAtual.length() > 100) {
+                return ResponseEntity.badRequest().body("Senha invalida.");
+            }
             if (!encoder.matches(senhaAtual, usuario.getSenha())) {
                 logger.warn("Tentativa de troca de senha com senha incorreta para usuario: {}", usuario.getEmail());
                 return ResponseEntity.badRequest().body("Senha atual incorreta.");
@@ -141,6 +171,8 @@ public class AutenticacaoController {
                 return ResponseEntity.badRequest().body("Senha muito longa.");
             }
             usuario.setSenha(encoder.encode(novaSenha));
+            // Revogar todos os refresh tokens ao trocar senha (invalida outras sessoes)
+            refreshTokenService.revogarTodos(usuario.getEmail());
         }
 
         usuarioRepository.save(usuario);
@@ -180,6 +212,9 @@ public class AutenticacaoController {
         if (senha == null || senha.isEmpty()) {
             return ResponseEntity.badRequest().body("Senha e obrigatoria para confirmar a exclusao.");
         }
+        if (senha.length() > 100) {
+            return ResponseEntity.badRequest().body("Senha invalida.");
+        }
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         Usuario usuario = usuarioRepository.findByEmail(userDetails.getEmail()).orElse(null);
@@ -200,6 +235,7 @@ public class AutenticacaoController {
 
         logger.info("Conta anonimizada (LGPD): userId={}", usuario.getId());
 
+        refreshTokenService.revogarTodos(userDetails.getEmail());
         jwtUtils.clearAuthCookies(response);
         return ResponseEntity.ok("Conta excluida com sucesso. Seus dados pessoais foram removidos.");
     }

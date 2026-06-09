@@ -116,11 +116,20 @@ public class JwtUtils {
         response.addCookie(cookie);
     }
 
-    public void setAuthCookies(HttpServletResponse response, String email) {
+    /**
+     * Seta cookies de acesso e refresh. Retorna o refresh token JWT
+     * para que o caller possa persistir no banco.
+     */
+    public String setAuthCookies(HttpServletResponse response, String email) {
         String accessToken = generateAccessToken(email);
         String refreshToken = generateRefreshToken(email);
         setTokenCookie(response, ACCESS_COOKIE, accessToken, jwtExpirationMs / 1000);
         setTokenCookie(response, REFRESH_COOKIE, refreshToken, jwtRefreshExpirationMs / 1000);
+        return refreshToken;
+    }
+
+    public int getRefreshExpirationMs() {
+        return jwtRefreshExpirationMs;
     }
 
     public void clearAuthCookies(HttpServletResponse response) {

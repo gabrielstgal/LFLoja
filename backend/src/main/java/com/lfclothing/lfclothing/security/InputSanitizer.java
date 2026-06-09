@@ -10,9 +10,14 @@ public final class InputSanitizer {
     public static String sanitizeHtml(String input) {
         if (input == null) return null;
         return input
-            .replaceAll("<[^>]*>", "")   // remove tags HTML
-            .replaceAll("javascript:", "")
-            .replaceAll("on\\w+\\s*=", "")  // remove event handlers
+            .replaceAll("<[^>]*>", "")                         // remove tags HTML
+            .replaceAll("(?i)javascript\\s*:", "")             // remove javascript: (case insensitive, com espaços)
+            .replaceAll("(?i)vbscript\\s*:", "")               // remove vbscript:
+            .replaceAll("(?i)data\\s*:", "")                   // remove data: URIs
+            .replaceAll("(?i)on\\w+\\s*=", "")                // remove event handlers
+            .replaceAll("(?i)expression\\s*\\(", "")          // remove CSS expressions
+            .replaceAll("&#[xX]?[0-9a-fA-F]+;?", "")         // remove HTML numeric entities
+            .replaceAll("&\\w+;", "")                          // remove HTML named entities
             .trim();
     }
 

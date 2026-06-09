@@ -1,12 +1,15 @@
 package com.lfclothing.lfclothing.controller;
 
+import com.lfclothing.lfclothing.dto.CriarCupomDTO;
 import com.lfclothing.lfclothing.model.Cupom;
 import com.lfclothing.lfclothing.model.TipoCupom;
 import com.lfclothing.lfclothing.repository.CupomRepository;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -28,11 +31,17 @@ public class CupomController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<?> criar(@RequestBody Cupom cupom) {
-        cupom.setCodigo(cupom.getCodigo());
-        if (cupomRepository.existsByCodigo(cupom.getCodigo())) {
+    public ResponseEntity<?> criar(@Valid @RequestBody CriarCupomDTO dto) {
+        if (dto.tipo() == TipoCupom.PERCENTUAL && dto.valor().compareTo(BigDecimal.valueOf(100)) > 0) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Desconto percentual nao pode ser maior que 100%."));
+        }
+        String codigo = dto.codigo().toUpperCase().trim();
+        if (cupomRepository.existsByCodigo(codigo)) {
             return ResponseEntity.badRequest().body(Map.of("erro", "Ja existe um cupom com este codigo."));
         }
+        Cupom cupom = new Cupom(codigo, dto.tipo(), dto.valor());
+        if (dto.usoMaximo() != null) cupom.setUsoMaximo(dto.usoMaximo());
+        if (dto.dataExpiracao() != null) cupom.setDataExpiracao(dto.dataExpiracao());
         return ResponseEntity.ok(cupomRepository.save(cupom));
     }
 

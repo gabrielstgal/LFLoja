@@ -8,14 +8,20 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Configuration
 public class DataSeeder {
+
+    private static final Logger logger = LoggerFactory.getLogger(DataSeeder.class);
 
     @Bean
     CommandLineRunner initProdutos(ProdutoRepository repository, CategoriaRepository categoriaRepository) {
@@ -29,19 +35,20 @@ public class DataSeeder {
                     new Categoria("Shorts", "/img/produtos/IMG_0249.JPG.jpeg", 4),
                     new Categoria("Bonés", "/img/produtos/IMG_0370.PNG", 5)
                 ));
-                System.out.println("Categorias padrão inseridas com sucesso!");
+                logger.info("Categorias padrao inseridas com sucesso!");
             }
 
-            // Gerar código para produtos existentes que não têm
-            repository.findAll().stream()
-                .filter(p -> p.getCodigo() == null || p.getCodigo().isBlank())
-                .forEach(p -> {
+            // Gerar código apenas para produtos sem codigo (query direcionada, sem findAll)
+            List<Produto> semCodigo = repository.findSemCodigo();
+            if (!semCodigo.isEmpty()) {
+                semCodigo.forEach(p -> {
                     p.setCodigo("LF-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
-                    repository.save(p);
                 });
+                repository.saveAll(semCodigo);
+                logger.info("Codigos gerados para {} produtos.", semCodigo.size());
+            }
 
-            boolean jaTemOriginais = repository.findAll().stream()
-                    .anyMatch(p -> p.getNome().contains("Camiseta Classic Areia"));
+            boolean jaTemOriginais = repository.existsByNomeContaining("Camiseta Classic Areia");
 
             if (!jaTemOriginais) {
                 Produto p1 = new Produto("Camiseta Classic Areia", "Camiseta com caimento perfeito, desenvolvida em algodão premium com toque super macio. Ideal para o dia a dia e composições minimalistas. Logo LF discreto no peito.", "Camisetas", new BigDecimal("89.90"), "/img/camiseta-bege.jpg", 0);
@@ -57,7 +64,7 @@ public class DataSeeder {
                 p4.setEstoqueTamanhos(new LinkedHashMap<>(Map.of("P", 17, "M", 18, "G", 18, "GG", 17)));
 
                 repository.saveAll(Arrays.asList(p1, p2, p3, p4));
-                System.out.println("Coleção Original LF inserida com sucesso no banco vazio!");
+                logger.info("Colecao Original LF inserida com sucesso!");
             }
         };
     }

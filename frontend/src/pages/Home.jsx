@@ -13,7 +13,8 @@ const Home = () => {
   const [categorias, setCategorias] = useState([]);
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showArrow, setShowArrow] = useState(false);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(false);
   const navigate = useNavigate();
   const scrollRef = useRef(null);
   const { current, bannerIndex, setBannerIndex, slides } = useBannerCarousel(banners);
@@ -32,14 +33,28 @@ const Home = () => {
     ]).finally(() => setLoading(false));
   }, []);
 
+  const updateArrows = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setShowLeftArrow(el.scrollLeft > 10);
+    setShowRightArrow(el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
+  };
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const check = () => setShowArrow(el.scrollWidth > el.clientWidth + 10);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    updateArrows();
+    el.addEventListener('scroll', updateArrows);
+    window.addEventListener('resize', updateArrows);
+    return () => {
+      el.removeEventListener('scroll', updateArrows);
+      window.removeEventListener('resize', updateArrows);
+    };
   }, [categorias]);
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' });
+  };
 
   const scrollRight = () => {
     scrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' });
@@ -77,13 +92,22 @@ const Home = () => {
               <p className="categories-label">Explore por</p>
               <h2 className="categories-title">Categorias</h2>
             </div>
-            {showArrow && (
-              <button className="categories-arrow" onClick={scrollRight} aria-label="Ver mais categorias">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
-            )}
+            <div className="categories-arrows">
+              {showLeftArrow && (
+                <button className="categories-arrow categories-arrow-left" onClick={scrollLeft} aria-label="Voltar categorias">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              )}
+              {showRightArrow && (
+                <button className="categories-arrow categories-arrow-right" onClick={scrollRight} aria-label="Ver mais categorias">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
           <div className="categories-scroll" ref={scrollRef}>
             {categorias.map(cat => (

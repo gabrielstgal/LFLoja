@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.lfclothing.lfclothing.security.InputSanitizer;
 
+import com.lfclothing.lfclothing.dto.AvaliacaoPublicaDTO;
+
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +39,8 @@ public class AvaliacaoController {
 
     @GetMapping("/produto/{produtoId}")
     public ResponseEntity<?> listarPorProduto(@PathVariable Long produtoId) {
-        List<Avaliacao> avaliacoes = avaliacaoRepository.findByProdutoIdOrderByDataCriacaoDesc(produtoId);
+        List<AvaliacaoPublicaDTO> avaliacoes = avaliacaoRepository.findByProdutoIdOrderByDataCriacaoDesc(produtoId)
+                .stream().map(AvaliacaoPublicaDTO::fromEntity).toList();
         Double media = avaliacaoRepository.findMediaByProdutoId(produtoId);
         long total = avaliacaoRepository.countByProdutoId(produtoId);
 

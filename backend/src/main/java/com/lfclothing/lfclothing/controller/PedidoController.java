@@ -91,14 +91,12 @@ public class PedidoController {
                 int disponivel = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
                 if (disponivel < quantidade) {
                     return ResponseEntity.badRequest().body(
-                            "Estoque insuficiente para " + produto.getNome()
-                            + " (tam: " + tamanho + ", disponivel: " + disponivel + ").");
+                            "Estoque insuficiente para " + produto.getNome() + " no tamanho " + tamanho + ".");
                 }
             } else {
                 if (produto.getQuantidadeEstoque() < quantidade) {
                     return ResponseEntity.badRequest().body(
-                            "Estoque insuficiente para " + produto.getNome()
-                            + " (disponivel: " + produto.getQuantidadeEstoque() + ").");
+                            "Estoque insuficiente para " + produto.getNome() + ".");
                 }
             }
 
@@ -116,7 +114,7 @@ public class PedidoController {
         BigDecimal valorDesconto = BigDecimal.ZERO;
         String cupomStatus = null;
         if (requisicao.cupom() != null && !requisicao.cupom().isBlank()) {
-            var cupomOpt = cupomRepository.findByCodigoAndAtivoTrue(requisicao.cupom().toUpperCase().trim());
+            var cupomOpt = cupomRepository.findByCodigoAndAtivoTrueForUpdate(requisicao.cupom().toUpperCase().trim());
             if (cupomOpt.isPresent() && cupomOpt.get().isValido()) {
                 Cupom cupom = cupomOpt.get();
                 if (cupom.getTipo() == TipoCupom.PERCENTUAL) {

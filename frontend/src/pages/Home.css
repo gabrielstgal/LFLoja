@@ -227,6 +227,11 @@
   color: var(--color-text);
 }
 
+.categories-arrows {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .categories-arrow {
   display: flex;
   align-items: center;

@@ -1,8 +1,10 @@
 package com.lfclothing.lfclothing.controller;
 
+import com.lfclothing.lfclothing.dto.CriarProdutoDTO;
 import com.lfclothing.lfclothing.model.Produto;
 import com.lfclothing.lfclothing.repository.ProdutoRepository;
 import com.lfclothing.lfclothing.service.CloudinaryService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,17 @@ public class ProdutoController {
             return ResponseEntity.badRequest().body(Map.of("erro", "Apenas imagens (JPEG, PNG, WebP, GIF) sao permitidas."));
         }
 
+        // Validacao de magic bytes (nao confiar apenas no Content-Type do cliente)
+        try {
+            byte[] header = new byte[12];
+            int read = arquivo.getInputStream().read(header);
+            if (read < 4 || !isValidImageMagicBytes(header)) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Arquivo nao e uma imagem valida."));
+            }
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Erro ao ler arquivo."));
+        }
+
         String nomeOriginal = arquivo.getOriginalFilename();
         if (nomeOriginal != null && !nomeOriginal.matches("^[a-zA-Z0-9._\\-\\s()\\[\\]]+$")) {
             return ResponseEntity.badRequest().body(Map.of("erro", "Nome de arquivo invalido. Renomeie sem acentos ou caracteres especiais."));
@@ -82,7 +95,13 @@ public class ProdutoController {
             @RequestParam(defaultValue = "10") int tamanho,
             @RequestParam(defaultValue = "id,desc") String[] ordenar) {
 
-        Sort.Direction direcao = ordenar.length > 1 ? Sort.Direction.fromString(ordenar[1]) : Sort.Direction.DESC;
+        Sort.Direction direcao = Sort.Direction.DESC;
+        if (ordenar.length > 1) {
+            String dir = ordenar[1].trim().toUpperCase();
+            if ("ASC".equals(dir) || "DESC".equals(dir)) {
+                direcao = Sort.Direction.fromString(dir);
+            }
+        }
         String ordenarPor = ordenar.length > 0 ? ordenar[0] : "id";
         if (!CAMPOS_ORDENACAO_PERMITIDOS.contains(ordenarPor)) {
             ordenarPor = "id";
@@ -128,31 +147,38 @@ public class ProdutoController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<?> criarProduto(@RequestBody Produto produto) {
-        produto.setNome(InputSanitizer.sanitizeText(produto.getNome()));
-        produto.setDescricao(InputSanitizer.sanitizeHtml(produto.getDescricao()));
-        if (!InputSanitizer.isValidUrl(produto.getUrlImagem())) {
+    public ResponseEntity<?> criarProduto(@Valid @RequestBody CriarProdutoDTO dto) {
+        Produto produto = new Produto();
+        produto.setNome(InputSanitizer.sanitizeText(dto.nome()));
+        produto.setDescricao(dto.descricao() != null ? InputSanitizer.sanitizeHtml(dto.descricao()) : "");
+        produto.setCategoria(InputSanitizer.sanitizeText(dto.categoria()));
+        produto.setPreco(dto.preco());
+        produto.setPrecoPromocional(dto.precoPromocional());
+        if (!InputSanitizer.isValidUrl(dto.urlImagem())) {
             return ResponseEntity.badRequest().body(Map.of("erro", "URL da imagem invalida."));
         }
+        produto.setUrlImagem(dto.urlImagem());
+        if (dto.imagens() != null) produto.setImagens(dto.imagens());
+        if (dto.estoqueTamanhos() != null) produto.setEstoqueTamanhos(dto.estoqueTamanhos());
         produto.recalcularEstoqueTotal();
         return ResponseEntity.ok(produtoRepository.save(produto));
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizarProduto(@PathVariable Long id, @RequestBody Produto detalhesProduto) {
+    public ResponseEntity<?> atualizarProduto(@PathVariable Long id, @Valid @RequestBody CriarProdutoDTO dto) {
         return produtoRepository.findById(id).map(produto -> {
-            produto.setNome(InputSanitizer.sanitizeText(detalhesProduto.getNome()));
-            produto.setDescricao(InputSanitizer.sanitizeHtml(detalhesProduto.getDescricao()));
-            produto.setCategoria(InputSanitizer.sanitizeText(detalhesProduto.getCategoria()));
-            produto.setPreco(detalhesProduto.getPreco());
-            produto.setPrecoPromocional(detalhesProduto.getPrecoPromocional());
-            if (!InputSanitizer.isValidUrl(detalhesProduto.getUrlImagem())) {
+            produto.setNome(InputSanitizer.sanitizeText(dto.nome()));
+            produto.setDescricao(dto.descricao() != null ? InputSanitizer.sanitizeHtml(dto.descricao()) : "");
+            produto.setCategoria(InputSanitizer.sanitizeText(dto.categoria()));
+            produto.setPreco(dto.preco());
+            produto.setPrecoPromocional(dto.precoPromocional());
+            if (!InputSanitizer.isValidUrl(dto.urlImagem())) {
                 return ResponseEntity.badRequest().body((Object) Map.of("erro", "URL da imagem invalida."));
             }
-            produto.setUrlImagem(detalhesProduto.getUrlImagem());
-            produto.setImagens(detalhesProduto.getImagens());
-            produto.setEstoqueTamanhos(detalhesProduto.getEstoqueTamanhos());
+            produto.setUrlImagem(dto.urlImagem());
+            if (dto.imagens() != null) produto.setImagens(dto.imagens());
+            if (dto.estoqueTamanhos() != null) produto.setEstoqueTamanhos(dto.estoqueTamanhos());
             return ResponseEntity.ok((Object) produtoRepository.save(produto));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -163,5 +189,20 @@ public class ProdutoController {
         if (!produtoRepository.existsById(id)) return ResponseEntity.notFound().build();
         produtoRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    private boolean isValidImageMagicBytes(byte[] header) {
+        // JPEG: FF D8 FF
+        if (header[0] == (byte) 0xFF && header[1] == (byte) 0xD8 && header[2] == (byte) 0xFF) return true;
+        // PNG: 89 50 4E 47
+        if (header[0] == (byte) 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
+        // GIF: 47 49 46 38
+        if (header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38) return true;
+        // WebP: RIFF....WEBP
+        if (header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+                && header.length >= 12 && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50) return true;
+        // HEIC/HEIF: ....ftyp (offset 4)
+        if (header.length >= 12 && header[4] == 0x66 && header[5] == 0x74 && header[6] == 0x79 && header[7] == 0x70) return true;
+        return false;
     }
 }

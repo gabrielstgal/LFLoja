@@ -29,4 +29,9 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     @Modifying
     @Query("UPDATE Produto p SET p.quantidadeEstoque = p.quantidadeEstoque + :quantidade WHERE p.id = :id")
     void restaurarEstoque(@Param("id") Long id, @Param("quantidade") int quantidade);
+
+    @Query("SELECT p FROM Produto p WHERE p.codigo IS NULL OR p.codigo = ''")
+    List<Produto> findSemCodigo();
+
+    boolean existsByNomeContaining(String nome);
 }

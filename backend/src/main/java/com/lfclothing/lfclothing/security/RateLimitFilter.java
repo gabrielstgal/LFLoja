@@ -97,22 +97,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        // Railway/Cloudflare passam o IP real via headers
+        // Estrategia: usar o ultimo IP confiavel da cadeia X-Forwarded-For
+        // O proxy do Railway/load balancer adiciona o IP real do cliente como o
+        // penultimo elemento (o ultimo eh o proprio proxy). Se ha apenas 1 IP,
+        // ele foi adicionado pelo proxy e eh confiavel.
+        // NUNCA confiar no primeiro IP, pois o cliente pode forjar o header.
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            // Pega o primeiro IP (cliente original)
-            String ip = xForwardedFor.split(",")[0].trim();
+            String[] ips = xForwardedFor.split(",");
+            // Com 1 proxy confiavel (Railway), o IP do cliente esta na penultima posicao.
+            // Se ha apenas 1 IP, o proxy o adicionou (confiavel).
+            // Se ha 2+, o penultimo foi adicionado pelo proxy (IP real do cliente).
+            int trustedIndex = Math.max(0, ips.length - 1);
+            String ip = ips[trustedIndex].trim();
             if (isValidIp(ip)) return ip;
-        }
-
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank() && isValidIp(xRealIp.trim())) {
-            return xRealIp.trim();
-        }
-
-        String cfIp = request.getHeader("CF-Connecting-IP");
-        if (cfIp != null && !cfIp.isBlank() && isValidIp(cfIp.trim())) {
-            return cfIp.trim();
         }
 
         return request.getRemoteAddr();
