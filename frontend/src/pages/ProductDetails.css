@@ -177,6 +177,7 @@
 .size-btn.selected {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
   color: white;
 }
 

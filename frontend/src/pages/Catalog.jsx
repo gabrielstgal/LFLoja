@@ -5,7 +5,11 @@ import useProductFilters from '../hooks/useProductFilters';
 import { getPrecoEfetivo } from '../utils/productUtils';
 import './Catalog.css';
 
-const SIZES = ['P', 'M', 'G', 'GG', 'Único'];
+// Tamanhos sempre visiveis no filtro (cobre P-GG e os plus G1-G3 usados na loja).
+// O backend salva os tamanhos em MAIUSCULAS, entao usamos o mesmo formato.
+const BASE_SIZES = ['PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', 'G3'];
+// Ordem de exibicao; tamanhos fora desta lista vao para o final (ordem alfabetica).
+const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'G1', 'G2', 'G3', 'G4', 'XG', 'XGG'];
 
 const Catalog = () => {
   const {
@@ -24,6 +28,23 @@ const Catalog = () => {
     products.filter(p => { const preco = getPrecoEfetivo(p); return preco >= precoMin && preco <= precoMax; }),
     [products, precoMin, precoMax]
   );
+
+  // Une os tamanhos base com os realmente presentes nos produtos carregados,
+  // garantindo que tamanhos como G1/G2 sempre aparecam no filtro.
+  const availableSizes = useMemo(() => {
+    const set = new Set(BASE_SIZES);
+    products.forEach(p => (p.tamanhos || []).forEach(t => {
+      if (t && t.trim()) set.add(t.trim().toUpperCase());
+    }));
+    return [...set].sort((a, b) => {
+      const ia = SIZE_ORDER.indexOf(a);
+      const ib = SIZE_ORDER.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  }, [products]);
 
   return (
     <div className="catalog-container">
@@ -61,7 +82,7 @@ const Catalog = () => {
               className={`catalog-size-btn ${selectedSize === '' ? 'active' : ''}`}
               onClick={() => { setSelectedSize(''); setPage(0); }}
             >Todos</button>
-            {SIZES.map(s => (
+            {availableSizes.map(s => (
               <button
                 key={s}
                 className={`catalog-size-btn ${selectedSize === s ? 'active' : ''}`}

@@ -116,6 +116,7 @@
 
 .btn-add-cart:hover {
   background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
   color: #ffffff;
 }
 
