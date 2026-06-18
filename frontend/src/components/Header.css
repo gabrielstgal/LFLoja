@@ -380,6 +380,14 @@
     display: none !important;
   }
 
+  /* O menu de perfil precisa abrir no mobile (toque) — ele só é
+     renderizado quando aberto, então pode exibir sempre que presente */
+  .nav-dropdown-perfil .nav-dropdown-menu {
+    display: block !important;
+    top: calc(100% + 10px);
+    min-width: 200px;
+  }
+
   .nav-dropdown-arrow {
     display: none;
   }

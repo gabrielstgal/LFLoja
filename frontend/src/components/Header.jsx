@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ const Header = () => {
   const [categoriasOpen, setCategoriasOpen] = useState(false);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [categorias, setCategorias] = useState([]);
+  const perfilRef = useRef(null);
   const { cartCount, setIsCartOpen } = useCart();
   const { favCount } = useFavorites();
   const location = useLocation();
@@ -36,7 +37,23 @@ const Header = () => {
     setMenuOpen(false);
     setSearchOpen(false);
     setCategoriasOpen(false);
+    setPerfilOpen(false);
   }, [location]);
+
+  useEffect(() => {
+    if (!perfilOpen) return;
+    const handleClickOutside = (e) => {
+      if (perfilRef.current && !perfilRef.current.contains(e.target)) {
+        setPerfilOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [perfilOpen]);
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
 
@@ -127,11 +144,12 @@ const Header = () => {
         </button>
         {user ? (
           <div
+            ref={perfilRef}
             className="nav-dropdown nav-dropdown-perfil"
             onMouseEnter={() => setPerfilOpen(true)}
             onMouseLeave={() => setPerfilOpen(false)}
           >
-            <button className="action-btn user-btn" title="Minha Conta">
+            <button className="action-btn user-btn" title="Minha Conta" onClick={() => setPerfilOpen(o => !o)}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                 <circle cx="12" cy="7" r="4"></circle>
