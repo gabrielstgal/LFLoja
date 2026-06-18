@@ -91,16 +91,23 @@ const Checkout = () => {
       };
 
       const data = await submitCheckout(payload);
-      const protocolo = data.protocolo;
-
-      // Limpar carrinho IMEDIATAMENTE após sucesso do servidor, antes de qualquer outra coisa
-      clearCart();
 
       if (data.cupomStatus === 'INVALIDO') {
         toast.warn('O cupom informado não é mais válido. O pedido foi registrado sem desconto.');
       }
 
-      const mensagem = buildWhatsAppMessage(protocolo);
+      // PIX: gera cobrança na página de pagamento. O carrinho só é limpo após
+      // a confirmação do pagamento (em PixPayment), preservando o carrinho se o
+      // usuário abandonar.
+      if (paymentMethod === 'PIX') {
+        navigate(`/pagamento/pix/${data.id}`);
+        return;
+      }
+
+      // Débito/Crédito: fluxo via WhatsApp (limpa carrinho imediatamente)
+      clearCart();
+
+      const mensagem = buildWhatsAppMessage(data.protocolo);
       const fone = telefoneLoja.replace(/\D/g, '').replace(/^0+/, '');
       const foneCompleto = fone.startsWith('55') ? fone : `55${fone}`;
       const whatsappUrl = `https://api.whatsapp.com/send?phone=${foneCompleto}&text=${mensagem}`;
@@ -266,11 +273,17 @@ const Checkout = () => {
             </div>
           )}
 
-          <button type="submit" disabled={loading || !telefoneLoja} className="btn-primary checkout-submit">
-            {loading ? (<><span className="checkout-spinner" /> Registrando pedido...</>) : 'Enviar Pedido via WhatsApp'}
+          <button type="submit" disabled={loading || (paymentMethod !== 'PIX' && !telefoneLoja)} className="btn-primary checkout-submit">
+            {loading
+              ? (<><span className="checkout-spinner" /> Registrando pedido...</>)
+              : (paymentMethod === 'PIX' ? 'Pagar com PIX' : 'Enviar Pedido via WhatsApp')}
           </button>
 
-          <p className="checkout-submit-hint">Você será redirecionado para o WhatsApp com os detalhes do pedido.</p>
+          <p className="checkout-submit-hint">
+            {paymentMethod === 'PIX'
+              ? 'Você verá o QR Code do PIX para concluir o pagamento.'
+              : 'Você será redirecionado para o WhatsApp com os detalhes do pedido.'}
+          </p>
         </form>
       </div>
     </div>

@@ -35,13 +35,15 @@ public class PedidoController {
     private final UsuarioRepository usuarioRepository;
     private final EnderecoRepository enderecoRepository;
     private final com.lfclothing.lfclothing.repository.CupomRepository cupomRepository;
+    private final com.lfclothing.lfclothing.service.PedidoPagamentoService pedidoPagamentoService;
 
-    public PedidoController(PedidoRepository pedidoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, EnderecoRepository enderecoRepository, com.lfclothing.lfclothing.repository.CupomRepository cupomRepository) {
+    public PedidoController(PedidoRepository pedidoRepository, ProdutoRepository produtoRepository, UsuarioRepository usuarioRepository, EnderecoRepository enderecoRepository, com.lfclothing.lfclothing.repository.CupomRepository cupomRepository, com.lfclothing.lfclothing.service.PedidoPagamentoService pedidoPagamentoService) {
         this.pedidoRepository = pedidoRepository;
         this.produtoRepository = produtoRepository;
         this.usuarioRepository = usuarioRepository;
         this.enderecoRepository = enderecoRepository;
         this.cupomRepository = cupomRepository;
+        this.pedidoPagamentoService = pedidoPagamentoService;
     }
 
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
@@ -192,62 +194,16 @@ public class PedidoController {
 
         // Ao confirmar pagamento (PENDENTE -> PAGO), desconta estoque
         if (statusAnterior == StatusPedido.PENDENTE && novoStatus == StatusPedido.PAGO) {
-            for (ItemPedido item : pedido.getItens()) {
-                Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
-                        .orElse(null);
-                if (produto == null) {
-                    return ResponseEntity.badRequest().body("Produto nao encontrado: " + item.getProduto().getId());
-                }
-
-                String tamanho = item.getTamanho();
-                boolean temTamanhos = produto.getEstoqueTamanhos() != null && !produto.getEstoqueTamanhos().isEmpty();
-
-                if (temTamanhos && tamanho != null && !tamanho.isBlank()) {
-                    int disponivel = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
-                    if (disponivel < item.getQuantidade()) {
-                        return ResponseEntity.badRequest()
-                                .body("Estoque insuficiente para: " + produto.getNome()
-                                        + " (tam: " + tamanho + ", disponivel: " + disponivel
-                                        + ", necessario: " + item.getQuantidade() + ")");
-                    }
-                    produto.getEstoqueTamanhos().put(tamanho, disponivel - item.getQuantidade());
-                    produto.recalcularEstoqueTotal();
-                } else if (!temTamanhos) {
-                    int estoqueAtual = produto.getQuantidadeEstoque();
-                    if (estoqueAtual < item.getQuantidade()) {
-                        return ResponseEntity.badRequest()
-                                .body("Estoque insuficiente para: " + produto.getNome()
-                                        + " (disponivel: " + estoqueAtual
-                                        + ", necessario: " + item.getQuantidade() + ")");
-                    }
-                    produto.setQuantidadeEstoque(estoqueAtual - item.getQuantidade());
-                }
-
-                produtoRepository.save(produto);
+            String erro = pedidoPagamentoService.descontarEstoque(pedido);
+            if (erro != null) {
+                return ResponseEntity.badRequest().body(erro);
             }
         }
 
         // Ao cancelar um pedido pago ou enviado, restaura estoque
         if ((statusAnterior == StatusPedido.PAGO || statusAnterior == StatusPedido.ENVIADO)
                 && novoStatus == StatusPedido.CANCELADO) {
-            for (ItemPedido item : pedido.getItens()) {
-                Produto produto = produtoRepository.findByIdComLock(item.getProduto().getId())
-                        .orElse(null);
-                if (produto == null) continue;
-
-                String tamanho = item.getTamanho();
-                boolean temTamanhos = produto.getEstoqueTamanhos() != null && !produto.getEstoqueTamanhos().isEmpty();
-
-                if (temTamanhos && tamanho != null && !tamanho.isBlank()) {
-                    int atual = produto.getEstoqueTamanhos().getOrDefault(tamanho, 0);
-                    produto.getEstoqueTamanhos().put(tamanho, atual + item.getQuantidade());
-                    produto.recalcularEstoqueTotal();
-                } else if (!temTamanhos) {
-                    produto.setQuantidadeEstoque(produto.getQuantidadeEstoque() + item.getQuantidade());
-                }
-
-                produtoRepository.save(produto);
-            }
+            pedidoPagamentoService.restaurarEstoque(pedido);
         }
 
         pedido.setStatus(novoStatus);
