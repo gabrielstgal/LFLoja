@@ -62,6 +62,7 @@
 
 .cookie-banner__btn--accept {
   background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
   color: #fff;
   border: 1px solid var(--color-primary);
 }

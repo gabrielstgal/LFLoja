@@ -302,6 +302,7 @@
   padding: 0.7rem 1.5rem;
   border-radius: 8px;
   background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
   color: white;
   border: none;
   font-weight: 600;

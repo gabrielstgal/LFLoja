@@ -8,6 +8,10 @@
   --color-primary-hover: #c1121f;
   --color-accent: #c8a96e;
   --color-accent-hover: #b8944e;
+
+  --gradient-primary: linear-gradient(135deg, #f25561 0%, #e63946 50%, #c1121f 100%);
+  --gradient-primary-hover: linear-gradient(135deg, #e63946 0%, #c1121f 60%, #9d0e19 100%);
+  --gradient-accent: linear-gradient(135deg, #d8bd86 0%, #c8a96e 55%, #b8944e 100%);
   --color-text: #1a1a1a;
   --color-text-muted: #888888;
   --color-border: #ebebeb;
@@ -62,6 +66,7 @@ button {
 
 .btn-primary {
   background-color: var(--color-primary);
+  background-image: var(--gradient-primary);
   color: #fff;
   padding: 0.75rem 1.75rem;
   border-radius: var(--border-radius);
@@ -69,12 +74,13 @@ button {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
+  box-shadow: 0 4px 14px rgba(230, 57, 70, 0.22);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-hover);
+  background-image: var(--gradient-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 25px rgba(230, 57, 70, 0.35);
 }
 
 .app-container {
