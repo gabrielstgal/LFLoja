@@ -4,7 +4,6 @@ import com.lfclothing.lfclothing.dto.abacatepay.AbacatePayCobrancaResponse;
 import com.lfclothing.lfclothing.dto.abacatepay.CobrancaPixRequest;
 import com.lfclothing.lfclothing.dto.abacatepay.CobrancaPixResposta;
 import com.lfclothing.lfclothing.model.Pedido;
-import com.lfclothing.lfclothing.model.Usuario;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +16,9 @@ import java.math.RoundingMode;
 import java.util.Map;
 
 /**
- * Cliente HTTP para a API da AbacatePay (Transparent Checkout / PIX).
- * Documentacao: https://docs.abacatepay.com/pages/transparents/create
+ * Cliente HTTP para a API da AbacatePay (PIX QR Code, API v1).
+ * Documentacao: https://docs.abacatepay.com/api-reference/criar-qrcode-pix
+ * Endpoints: POST /v1/pixQrCode/create, GET /v1/pixQrCode/check?id=...
  */
 @Service
 public class AbacatePayService {
@@ -45,28 +45,22 @@ public class AbacatePayService {
      * Usa o protocolo do pedido como externalId (idempotencia) e grava o id do
      * pedido em metadata para reconciliacao via webhook.
      */
-    public CobrancaPixResposta criarCobrancaPix(Pedido pedido, Usuario usuario) {
+    public CobrancaPixResposta criarCobrancaPix(Pedido pedido) {
         long amountCentavos = pedido.getValorTotal()
                 .multiply(BigDecimal.valueOf(100))
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
 
-        // customer OMITIDO de proposito: quando enviado, a AbacatePay exige os 4
-        // campos (name, taxId, email, cellphone). Nao temos CPF/telefone do usuario,
-        // e um customer parcial faz a API rejeitar com 422 ("Value should be one of
-        // 'object', 'object'"). O objeto customer e opcional; a reconciliacao e feita
-        // via metadata.pedidoId e externalId (protocolo).
-        var data = new CobrancaPixRequest.Data(
+        var body = new CobrancaPixRequest(
                 amountCentavos,
-                "Pedido " + pedido.getProtocolo() + " - LF Clothing",
                 pixExpiresSeconds,
-                null,
+                "Pedido " + pedido.getProtocolo() + " - LF Clothing",
                 Map.of("pedidoId", String.valueOf(pedido.getId())),
                 pedido.getProtocolo());
 
         AbacatePayCobrancaResponse resp = restClient.post()
-                .uri("/transparents/create")
-                .body(new CobrancaPixRequest("PIX", data))
+                .uri("/pixQrCode/create")
+                .body(body)
                 .retrieve()
                 .body(AbacatePayCobrancaResponse.class);
 
@@ -86,7 +80,7 @@ public class AbacatePayService {
      */
     public String consultarStatus(String chargeId) {
         AbacatePayCobrancaResponse resp = restClient.get()
-                .uri(uriBuilder -> uriBuilder.path("/transparents/check")
+                .uri(uriBuilder -> uriBuilder.path("/pixQrCode/check")
                         .queryParam("id", chargeId).build())
                 .retrieve()
                 .body(AbacatePayCobrancaResponse.class);

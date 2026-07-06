@@ -73,7 +73,7 @@ public class PagamentoController {
         }
 
         try {
-            CobrancaPixResposta cobranca = abacatePayService.criarCobrancaPix(pedido, pedido.getUsuario());
+            CobrancaPixResposta cobranca = abacatePayService.criarCobrancaPix(pedido);
 
             pedido.setMetodoPagamento(MetodoPagamento.PIX);
             pedido.setPagamentoId(cobranca.id());
@@ -174,7 +174,9 @@ public class PagamentoController {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(rawBody, Map.class);
             String event = String.valueOf(payload.getOrDefault("event", ""));
-            if (!"transparent.completed".equals(event)) {
+            // API v1 PIX QR Code envia "billing.paid" quando a cobranca e paga.
+            // Aceitamos tambem "transparent.completed" (v2) por robustez.
+            if (!"billing.paid".equals(event) && !"transparent.completed".equals(event)) {
                 // Outros eventos sao ignorados (no-op)
                 return ResponseEntity.ok("ignored");
             }
