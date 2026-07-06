@@ -42,6 +42,13 @@ public class Pedido {
     @Column(name = "valor_desconto")
     private BigDecimal valorDesconto;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_pagamento")
+    private MetodoPagamento metodoPagamento;
+
+    @Column(name = "pagamento_id")
+    private String pagamentoId;
+
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao = LocalDateTime.now();
 
@@ -104,5 +111,11 @@ public class Pedido {
 
     public BigDecimal getValorDesconto() { return valorDesconto; }
     public void setValorDesconto(BigDecimal valorDesconto) { this.valorDesconto = valorDesconto; }
+
+    public MetodoPagamento getMetodoPagamento() { return metodoPagamento; }
+    public void setMetodoPagamento(MetodoPagamento metodoPagamento) { this.metodoPagamento = metodoPagamento; }
+
+    public String getPagamentoId() { return pagamentoId; }
+    public void setPagamentoId(String pagamentoId) { this.pagamentoId = pagamentoId; }
 
 }

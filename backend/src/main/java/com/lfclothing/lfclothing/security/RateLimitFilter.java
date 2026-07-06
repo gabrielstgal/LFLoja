@@ -47,6 +47,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         String method = request.getMethod();
 
+        // Webhook de pagamento (server-to-server, protegido por segredo proprio) —
+        // isento de rate limit para nao descartar notificacoes de pagamento.
+        if (path.equals("/api/pagamentos/webhook/abacatepay")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // Limpa buckets expirados periodicamente
         cleanupIfNeeded();
 
