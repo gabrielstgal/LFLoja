@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
@@ -70,6 +71,13 @@ public class PagamentoController {
 
         if (pedido.getStatus() != StatusPedido.PENDENTE) {
             return ResponseEntity.badRequest().body("Este pedido nao esta pendente de pagamento.");
+        }
+
+        // AbacatePay exige valor minimo de R$ 1,00 (100 centavos) para cobranca PIX.
+        if (pedido.getValorTotal() == null
+                || pedido.getValorTotal().compareTo(new BigDecimal("1.00")) < 0) {
+            return ResponseEntity.badRequest()
+                    .body("O valor minimo para pagamento via PIX e R$ 1,00.");
         }
 
         try {
