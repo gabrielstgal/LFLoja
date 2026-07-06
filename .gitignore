@@ -80,6 +80,11 @@ node_modules/
 package-lock.json
 test.js
 
+# AbacatePay PIX — auxiliares de deploy/dev (não fazem parte do app)
+DEPLOY-ABACATEPAY-PIX.md
+testar-pix-dev.ps1
+backend/db/
+
 # Crash reports
 hs_err_pid*
 replay_pid*
