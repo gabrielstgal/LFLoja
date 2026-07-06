@@ -51,14 +51,16 @@ public class AbacatePayService {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
 
-        var customer = new CobrancaPixRequest.Customer(
-                usuario.getNome(), usuario.getEmail(), null, null);
-
+        // customer OMITIDO de proposito: quando enviado, a AbacatePay exige os 4
+        // campos (name, taxId, email, cellphone). Nao temos CPF/telefone do usuario,
+        // e um customer parcial faz a API rejeitar com 422 ("Value should be one of
+        // 'object', 'object'"). O objeto customer e opcional; a reconciliacao e feita
+        // via metadata.pedidoId e externalId (protocolo).
         var data = new CobrancaPixRequest.Data(
                 amountCentavos,
                 "Pedido " + pedido.getProtocolo() + " - LF Clothing",
                 pixExpiresSeconds,
-                customer,
+                null,
                 Map.of("pedidoId", String.valueOf(pedido.getId())),
                 pedido.getProtocolo());
 
