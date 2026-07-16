@@ -38,15 +38,18 @@ public class PagamentoController {
     private final PedidoPagamentoService pedidoPagamentoService;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
+    private final String webhookPublicKey;
 
     public PagamentoController(PedidoRepository pedidoRepository, AbacatePayService abacatePayService,
                                PedidoPagamentoService pedidoPagamentoService, ObjectMapper objectMapper,
-                               @Value("${abacatepay.webhook-secret}") String webhookSecret) {
+                               @Value("${abacatepay.webhook-secret}") String webhookSecret,
+                               @Value("${abacatepay.webhook-public-key}") String webhookPublicKey) {
         this.pedidoRepository = pedidoRepository;
         this.abacatePayService = abacatePayService;
         this.pedidoPagamentoService = pedidoPagamentoService;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret;
+        this.webhookPublicKey = webhookPublicKey;
     }
 
     /**
@@ -167,8 +170,12 @@ public class PagamentoController {
             return ResponseEntity.status(401).body("unauthorized");
         }
 
-        // Camada 2: assinatura HMAC (validada apenas se enviada)
-        if (signature != null && !signature.isBlank()
+        // Camada 2: assinatura HMAC-SHA256 do header X-Webhook-Signature, calculada com a
+        // CHAVE PUBLICA FIXA da AbacatePay (nao com o webhookSecret). Validada apenas quando a
+        // chave publica estiver configurada E a assinatura vier no request; caso contrario a
+        // Camada 1 (segredo na query) ja garante a autenticidade.
+        if (webhookPublicKey != null && !webhookPublicKey.isBlank()
+                && signature != null && !signature.isBlank()
                 && rawBody != null && !assinaturaHmacValida(rawBody, signature)) {
             log.warn("Webhook AbacatePay rejeitado: assinatura HMAC invalida");
             return ResponseEntity.status(401).body("unauthorized");
@@ -182,9 +189,12 @@ public class PagamentoController {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(rawBody, Map.class);
             String event = String.valueOf(payload.getOrDefault("event", ""));
-            // API v1 PIX QR Code envia "billing.paid" quando a cobranca e paga.
-            // Aceitamos tambem "transparent.completed" (v2) por robustez.
-            if (!"billing.paid".equals(event) && !"transparent.completed".equals(event)) {
+            // API v2: PIX transparente pago dispara "transparent.completed";
+            // checkout hospedado (cartao/PIX) dispara "checkout.completed".
+            // "billing.paid" (v1) mantido por robustez, mas nao vem na v2.
+            if (!"transparent.completed".equals(event)
+                    && !"checkout.completed".equals(event)
+                    && !"billing.paid".equals(event)) {
                 // Outros eventos sao ignorados (no-op)
                 return ResponseEntity.ok("ignored");
             }
@@ -204,7 +214,12 @@ public class PagamentoController {
         }
     }
 
-    /** Resolve o pedido pelo metadata.pedidoId; fallback: id da cobranca (pagamentoId). */
+    /**
+     * Resolve o pedido pelo metadata.pedidoId; fallback: id da cobranca (pagamentoId).
+     * Na v2 o payload do webhook aninha os dados da cobranca em {@code data.transparent}
+     * (PIX transparente) ou {@code data.checkout} (checkout hospedado), entao procuramos
+     * nesses escopos alem da raiz de {@code data}.
+     */
     @SuppressWarnings("unchecked")
     private Long extrairPedidoId(Map<String, Object> payload) {
         Object dataObj = payload.get("data");
@@ -213,24 +228,39 @@ public class PagamentoController {
         }
         Map<String, Object> data = (Map<String, Object>) dataObj;
 
-        Object metaObj = data.get("metadata");
-        if (metaObj instanceof Map) {
-            Object pid = ((Map<String, Object>) metaObj).get("pedidoId");
-            if (pid != null && !pid.toString().isBlank()) {
-                try {
-                    return Long.parseLong(pid.toString().trim());
-                } catch (NumberFormatException ignored) {
-                    // cai no fallback abaixo
+        // Escopos onde os campos da cobranca podem estar: a raiz de data e os objetos
+        // aninhados por tipo de cobranca da v2.
+        java.util.List<Map<String, Object>> escopos = new java.util.ArrayList<>();
+        escopos.add(data);
+        for (String chave : new String[]{"transparent", "checkout", "pixQrCode", "billing"}) {
+            if (data.get(chave) instanceof Map<?, ?> aninhado) {
+                escopos.add((Map<String, Object>) aninhado);
+            }
+        }
+
+        // 1) metadata.pedidoId em qualquer escopo
+        for (Map<String, Object> escopo : escopos) {
+            if (escopo.get("metadata") instanceof Map<?, ?> meta) {
+                Object pid = ((Map<String, Object>) meta).get("pedidoId");
+                if (pid != null && !pid.toString().isBlank()) {
+                    try {
+                        return Long.parseLong(pid.toString().trim());
+                    } catch (NumberFormatException ignored) {
+                        // tenta os proximos escopos / fallback abaixo
+                    }
                 }
             }
         }
 
-        for (String campo : new String[]{"id", "pixId", "chargeId"}) {
-            Object chargeId = data.get(campo);
-            if (chargeId != null && !chargeId.toString().isBlank()) {
-                var pedido = pedidoRepository.findByPagamentoId(chargeId.toString()).orElse(null);
-                if (pedido != null) {
-                    return pedido.getId();
+        // 2) fallback: id da cobranca (pagamentoId gravado no pedido) em qualquer escopo
+        for (Map<String, Object> escopo : escopos) {
+            for (String campo : new String[]{"id", "pixId", "chargeId"}) {
+                Object chargeId = escopo.get(campo);
+                if (chargeId != null && !chargeId.toString().isBlank()) {
+                    var pedido = pedidoRepository.findByPagamentoId(chargeId.toString()).orElse(null);
+                    if (pedido != null) {
+                        return pedido.getId();
+                    }
                 }
             }
         }
@@ -240,7 +270,7 @@ public class PagamentoController {
     private boolean assinaturaHmacValida(String rawBody, String signature) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            mac.init(new SecretKeySpec(webhookPublicKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             byte[] digest = mac.doFinal(rawBody.getBytes(StandardCharsets.UTF_8));
             String esperado = Base64.getEncoder().encodeToString(digest);
             return constantTimeEquals(esperado, signature);

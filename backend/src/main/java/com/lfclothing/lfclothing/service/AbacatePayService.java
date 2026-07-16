@@ -16,9 +16,9 @@ import java.math.RoundingMode;
 import java.util.Map;
 
 /**
- * Cliente HTTP para a API da AbacatePay (PIX QR Code, API v1).
- * Documentacao: https://docs.abacatepay.com/api-reference/criar-qrcode-pix
- * Endpoints: POST /v1/pixQrCode/create, GET /v1/pixQrCode/check?id=...
+ * Cliente HTTP para a API da AbacatePay v2 (Checkout Transparente PIX).
+ * Documentacao: https://docs.abacatepay.com/pages/transparents/create
+ * Endpoints: POST /v2/transparents/create, GET /v2/transparents/check?id=...
  */
 @Service
 public class AbacatePayService {
@@ -51,7 +51,7 @@ public class AbacatePayService {
                 .setScale(0, RoundingMode.HALF_UP)
                 .longValueExact();
 
-        var body = new CobrancaPixRequest(
+        var body = CobrancaPixRequest.pix(
                 amountCentavos,
                 pixExpiresSeconds,
                 "Pedido " + pedido.getProtocolo() + " - LF Clothing",
@@ -59,7 +59,7 @@ public class AbacatePayService {
                 pedido.getProtocolo());
 
         AbacatePayCobrancaResponse resp = restClient.post()
-                .uri("/pixQrCode/create")
+                .uri("/transparents/create")
                 .body(body)
                 .retrieve()
                 .body(AbacatePayCobrancaResponse.class);
@@ -80,7 +80,7 @@ public class AbacatePayService {
      */
     public String consultarStatus(String chargeId) {
         AbacatePayCobrancaResponse resp = restClient.get()
-                .uri(uriBuilder -> uriBuilder.path("/pixQrCode/check")
+                .uri(uriBuilder -> uriBuilder.path("/transparents/check")
                         .queryParam("id", chargeId).build())
                 .retrieve()
                 .body(AbacatePayCobrancaResponse.class);

@@ -84,6 +84,11 @@ test.js
 DEPLOY-ABACATEPAY-PIX.md
 testar-pix-dev.ps1
 backend/db/
+backend/ABACATEPAY_00_CONTEXTO.md
+backend/ABACATEPAY_01_BUGS.md
+backend/ABACATEPAY_02_ESTADO_ATUAL.md
+backend/ABACATEPAY_03_PASSO_A_PASSO.md
+backend/cookies.txt
 
 # Crash reports
 hs_err_pid*
