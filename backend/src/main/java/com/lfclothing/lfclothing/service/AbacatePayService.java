@@ -8,11 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -33,8 +35,14 @@ public class AbacatePayService {
             @Value("${abacatepay.base-url}") String baseUrl,
             @Value("${abacatepay.pix-expires-seconds}") int pixExpiresSeconds) {
         this.pixExpiresSeconds = pixExpiresSeconds;
+        // Timeouts para nao prender threads/conexoes do Tomcat caso a AbacatePay fique
+        // lenta ou nao responda (5s para conectar, 10s para ler a resposta).
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(10));
         this.restClient = RestClient.builder()
                 .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
                 .build();

@@ -201,8 +201,37 @@ public class PagamentoController {
 
             Long pedidoId = extrairPedidoId(payload);
             if (pedidoId == null) {
-                log.error("Webhook transparent.completed sem pedido identificavel. body={}", rawBody);
+                log.error("Webhook AbacatePay sem pedido identificavel.");
                 return ResponseEntity.ok("no-pedido");
+            }
+
+            // RE-VERIFICACAO DE SEGURANCA: nunca confiar apenas no corpo do webhook.
+            // Consultamos o status REAL da cobranca na AbacatePay antes de confirmar. Assim,
+            // mesmo que o segredo da URL vaze e alguem forje um webhook, so confirmamos se a
+            // cobranca daquele pedido estiver de fato paga na AbacatePay.
+            Pedido pedido = pedidoRepository.findById(pedidoId).orElse(null);
+            if (pedido == null) {
+                return ResponseEntity.ok("no-pedido");
+            }
+            if (pedido.getStatus() == StatusPedido.PAGO) {
+                return ResponseEntity.ok("ok"); // ja confirmado (idempotente)
+            }
+            String chargeId = pedido.getPagamentoId();
+            if (chargeId == null || chargeId.isBlank()) {
+                log.warn("Webhook AbacatePay: pedido {} sem cobranca associada; ignorado", pedidoId);
+                return ResponseEntity.ok("sem-cobranca");
+            }
+            String statusReal;
+            try {
+                statusReal = abacatePayService.consultarStatus(chargeId);
+            } catch (Exception e) {
+                log.error("Webhook AbacatePay: falha ao re-verificar status do pedido {}: {}", pedidoId, e.getMessage());
+                return ResponseEntity.status(502).body("retry"); // AbacatePay reenvia o webhook
+            }
+            if (!"PAID".equals(statusReal)) {
+                log.warn("Webhook AbacatePay: cobranca do pedido {} nao esta paga (status {}); ignorado (possivel forja).",
+                        pedidoId, statusReal);
+                return ResponseEntity.ok("not-paid");
             }
 
             pedidoPagamentoService.confirmarPagamento(pedidoId);
