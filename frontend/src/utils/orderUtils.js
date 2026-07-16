@@ -1,10 +1,18 @@
 export const STATUS_LABELS = {
   PENDENTE: 'Pendente',
   PAGO: 'Pago',
-  ENVIADO: 'Enviado',
+  ENVIADO: 'Saiu para entrega',
   ENTREGUE: 'Entregue',
   CANCELADO: 'Cancelado',
 };
+
+export const METODO_PAGAMENTO_LABELS = {
+  PIX: 'PIX',
+  DEBITO: 'Cartão (débito)',
+  CREDITO: 'Cartão (crédito)',
+};
+
+export const getMetodoPagamentoLabel = (metodo) => METODO_PAGAMENTO_LABELS[metodo] || '—';
 
 export const STATUS_STEPS = ['PENDENTE', 'PAGO', 'ENVIADO', 'ENTREGUE'];
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { atualizarStatus } from '../../services/pedidoService';
-import { getStatusClass } from '../../utils/orderUtils';
+import { getStatusClass, STATUS_LABELS, getMetodoPagamentoLabel } from '../../utils/orderUtils';
 
 const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
   const [searchOrder, setSearchOrder] = useState('');
@@ -44,6 +44,7 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
               <th>Cliente</th>
               <th>Data</th>
               <th>Valor</th>
+              <th>Pagamento</th>
               <th>Status</th>
               <th>Ação</th>
             </tr>
@@ -83,20 +84,15 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
                       </div>
                     )}
                   </td>
-                  <td><span className={`admin-status-badge ${getStatusClass(o.status)}`}>{o.status}</span></td>
+                  <td className="admin-order-payment">{getMetodoPagamentoLabel(o.metodoPagamento)}</td>
+                  <td><span className={`admin-status-badge ${getStatusClass(o.status)}`}>{STATUS_LABELS[o.status] || o.status}</span></td>
                   <td>
                     <div className="admin-order-actions">
                       {o.status === 'PENDENTE' && (
-                        <>
-                          <button className="admin-btn-pago" onClick={() => handleUpdateOrderStatus(o.id, 'PAGO')}>Pago</button>
-                          <button className="admin-btn-cancelado" onClick={() => handleUpdateOrderStatus(o.id, 'CANCELADO')}>Cancelar</button>
-                        </>
+                        <span className="admin-order-final">Aguardando pagamento</span>
                       )}
                       {o.status === 'PAGO' && (
-                        <>
-                          <button className="admin-btn-enviado" onClick={() => handleUpdateOrderStatus(o.id, 'ENVIADO')}>Enviado</button>
-                          <button className="admin-btn-cancelado" onClick={() => handleUpdateOrderStatus(o.id, 'CANCELADO')}>Cancelar</button>
-                        </>
+                        <button className="admin-btn-enviado" onClick={() => handleUpdateOrderStatus(o.id, 'ENVIADO')}>Saiu para entrega</button>
                       )}
                       {o.status === 'ENVIADO' && (
                         <button className="admin-btn-entregue" onClick={() => handleUpdateOrderStatus(o.id, 'ENTREGUE')}>Entregue</button>
@@ -110,7 +106,7 @@ const AdminOrders = ({ orders, onReload, onReloadProducts }) => {
 
                 {expandedOrderId === o.id && (
                   <tr className="admin-order-detail-row">
-                    <td colSpan="7">
+                    <td colSpan="8">
                       <div className="admin-order-detail">
                         <div className="admin-order-detail-grid">
                           <div className="admin-order-detail-section">
