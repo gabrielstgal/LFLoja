@@ -1,29 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-toastify';
 import { checkout as submitCheckout } from '../services/pedidoService';
-import { getLojaConfig } from '../services/lojaService';
+import { criarCartao } from '../services/pagamentoService';
 import useCepLookup from '../hooks/useCepLookup';
 import { hasPromo } from '../utils/productUtils';
 import './Checkout.css';
 
 const Checkout = () => {
-  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado, clearCart } = useCart();
+  const { cartItems, cartSubtotal, cartTotal, desconto, cupomAplicado } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [telefoneLoja, setTelefoneLoja] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('PIX');
-  const [parcelas, setParcelas] = useState(1);
-
-  useEffect(() => {
-    getLojaConfig()
-      .then(data => setTelefoneLoja(data.whatsapp))
-      .catch(() => toast.error('Erro ao carregar dados da loja.'));
-  }, []);
 
   const [address, setAddress] = useState({
     rua: '', numero: '', complemento: '',
@@ -44,30 +36,6 @@ const Checkout = () => {
         });
       }
     }
-  };
-
-  const buildWhatsAppMessage = (protocolo) => {
-    let msg = `Olá! Fiz o pedido *${protocolo}* na LF Clothing.\n\n`;
-
-    cartItems.forEach(item => {
-      msg += `- ${item.nome}`;
-      if (item.selectedSize) msg += ` (${item.selectedSize})`;
-      msg += ` x${item.quantity}\n`;
-    });
-
-    if (cupomAplicado && desconto > 0) {
-      msg += `\nCupom: *${cupomAplicado}* (-R$ ${desconto.toFixed(2)})`;
-    }
-    msg += `\n*Total: R$ ${cartTotal.toFixed(2)}*`;
-    const nomesPagamento = { PIX: 'Pix', DEBITO: 'Cartão de Débito', CREDITO: 'Cartão de Crédito' };
-    msg += `\n*Pagamento:* ${nomesPagamento[paymentMethod]}`;
-    if (paymentMethod === 'CREDITO' && parcelas > 1) {
-      msg += ` (${parcelas}x de R$ ${(cartTotal / parcelas).toFixed(2)})`;
-    }
-    msg += `\n*Frete:* A definir com vendedor`;
-    msg += `\n\nAguardo a confirmação!`;
-
-    return encodeURIComponent(msg);
   };
 
   const handleFinalize = async (e) => {
@@ -96,40 +64,27 @@ const Checkout = () => {
         toast.warn('O cupom informado não é mais válido. O pedido foi registrado sem desconto.');
       }
 
-      // PIX: gera cobrança na página de pagamento. O carrinho só é limpo após
-      // a confirmação do pagamento (em PixPayment), preservando o carrinho se o
-      // usuário abandonar.
+      // O carrinho só é limpo após a confirmação do pagamento (em PixPayment ou na
+      // página de retorno do cartão), preservando o carrinho se o usuário abandonar.
       if (paymentMethod === 'PIX') {
         navigate(`/pagamento/pix/${data.id}`);
         return;
       }
 
-      // Débito/Crédito: fluxo via WhatsApp (limpa carrinho imediatamente)
-      clearCart();
-
-      const mensagem = buildWhatsAppMessage(data.protocolo);
-      const fone = telefoneLoja.replace(/\D/g, '').replace(/^0+/, '');
-      const foneCompleto = fone.startsWith('55') ? fone : `55${fone}`;
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${foneCompleto}&text=${mensagem}`;
-
-      // Salvar URL do WhatsApp antes de navegar, para a página de sucesso poder usar
-      sessionStorage.setItem('lf-whatsapp-url', whatsappUrl);
-      navigate('/pedido/enviado');
+      // Débito/Crédito: cria o checkout hospedado na AbacatePay e redireciona o
+      // cliente para a página segura de pagamento (dados do cartão nunca passam por nós).
+      const cobranca = await criarCartao(data.id, paymentMethod);
+      window.location.href = cobranca.checkoutUrl;
     } catch (err) {
       const msg = err.response?.data;
       toast.error(typeof msg === 'string' ? msg : msg?.erro || 'Erro ao registrar pedido. Tente novamente.');
-    } finally {
       setLoading(false);
     }
   };
 
   if (!user) { navigate('/auth?redirect=/checkout'); return null; }
 
-  const parcelasOptions = [];
-  for (let i = 1; i <= 12; i++) {
-    const valor = (cartTotal / i).toFixed(2);
-    parcelasOptions.push({ value: i, label: i === 1 ? `1x de R$ ${valor} (à vista)` : `${i}x de R$ ${valor}` });
-  }
+  const isCartao = paymentMethod === 'DEBITO' || paymentMethod === 'CREDITO';
 
   return (
     <div className="checkout-container">
@@ -211,7 +166,7 @@ const Checkout = () => {
           <div className="checkout-payment-methods">
             <button
               type="button"
-              onClick={() => { setPaymentMethod('PIX'); setParcelas(1); }}
+              onClick={() => setPaymentMethod('PIX')}
               className={`checkout-payment-btn ${paymentMethod === 'PIX' ? 'selected pix' : ''}`}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
@@ -221,7 +176,7 @@ const Checkout = () => {
             </button>
             <button
               type="button"
-              onClick={() => { setPaymentMethod('DEBITO'); setParcelas(1); }}
+              onClick={() => setPaymentMethod('DEBITO')}
               className={`checkout-payment-btn ${paymentMethod === 'DEBITO' ? 'selected debito' : ''}`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="24" height="24">
@@ -244,45 +199,21 @@ const Checkout = () => {
           </div>
 
           {paymentMethod === 'CREDITO' && (
-            <div className="checkout-parcelas">
-              <label className="checkout-parcelas-label">Parcelas desejadas</label>
-              <select
-                value={parcelas}
-                onChange={(e) => setParcelas(Number(e.target.value))}
-                className="checkout-input"
-              >
-                {parcelasOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            <p className="checkout-parcelas-hint">
+              Você escolhe o número de parcelas (até 6x) na tela de pagamento.
+            </p>
           )}
 
-          {paymentMethod === 'CREDITO' && (
-            <div className="checkout-parcelas">
-              <label className="checkout-parcelas-label">Parcelas desejadas</label>
-              <select
-                value={parcelas}
-                onChange={(e) => setParcelas(Number(e.target.value))}
-                className="checkout-input"
-              >
-                {parcelasOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading || (paymentMethod !== 'PIX' && !telefoneLoja)} className="btn-primary checkout-submit">
+          <button type="submit" disabled={loading} className="btn-primary checkout-submit">
             {loading
               ? (<><span className="checkout-spinner" /> Registrando pedido...</>)
-              : (paymentMethod === 'PIX' ? 'Pagar com PIX' : 'Enviar Pedido via WhatsApp')}
+              : (paymentMethod === 'PIX' ? 'Pagar com PIX' : 'Pagar com Cartão')}
           </button>
 
           <p className="checkout-submit-hint">
             {paymentMethod === 'PIX'
               ? 'Você verá o QR Code do PIX para concluir o pagamento.'
-              : 'Você será redirecionado para o WhatsApp com os detalhes do pedido.'}
+              : 'Você será redirecionado para a página segura da AbacatePay para pagar com cartão.'}
           </p>
         </form>
       </div>

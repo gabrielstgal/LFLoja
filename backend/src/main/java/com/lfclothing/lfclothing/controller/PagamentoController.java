@@ -1,5 +1,6 @@
 package com.lfclothing.lfclothing.controller;
 
+import com.lfclothing.lfclothing.dto.abacatepay.CheckoutCartaoResposta;
 import com.lfclothing.lfclothing.dto.abacatepay.CobrancaPixResposta;
 import com.lfclothing.lfclothing.model.MetodoPagamento;
 import com.lfclothing.lfclothing.model.Pedido;
@@ -153,6 +154,108 @@ public class PagamentoController {
     }
 
     /**
+     * Cria um checkout hospedado de CARTAO (credito/debito) para um pedido PENDENTE
+     * do usuario logado e retorna a URL para onde o front deve redirecionar o cliente.
+     * O dado do cartao e digitado no ambiente PCI da AbacatePay — nunca passa por aqui.
+     */
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @PostMapping("/cartao/{pedidoId}")
+    @Transactional
+    public ResponseEntity<?> criarCartao(@PathVariable Long pedidoId,
+                                         @RequestParam(value = "tipo", defaultValue = "CREDITO") String tipo,
+                                         Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Pedido pedido = pedidoRepository.findByIdWithDetails(pedidoId).orElse(null);
+        if (pedido == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !pedido.getUsuario().getId().equals(userDetails.getId())) {
+            return ResponseEntity.status(403).body("Pedido nao pertence ao usuario.");
+        }
+
+        if (pedido.getStatus() != StatusPedido.PENDENTE) {
+            return ResponseEntity.badRequest().body("Este pedido nao esta pendente de pagamento.");
+        }
+
+        // Cartao exige minimo de R$ 10,00 (valor minimo por parcela da AbacatePay).
+        if (pedido.getValorTotal() == null
+                || pedido.getValorTotal().compareTo(new BigDecimal("10.00")) < 0) {
+            return ResponseEntity.badRequest()
+                    .body("O valor minimo para pagamento com cartao e R$ 10,00.");
+        }
+
+        boolean credito = !"DEBITO".equalsIgnoreCase(tipo);
+        MetodoPagamento metodo = credito ? MetodoPagamento.CREDITO : MetodoPagamento.DEBITO;
+
+        try {
+            CheckoutCartaoResposta checkout = abacatePayService.criarCheckoutCartao(pedido, credito);
+
+            pedido.setMetodoPagamento(metodo);
+            pedido.setPagamentoId(checkout.id());
+            pedidoRepository.save(pedido);
+
+            var response = new LinkedHashMap<String, Object>();
+            response.put("checkoutId", checkout.id());
+            response.put("checkoutUrl", checkout.url());
+            response.put("status", checkout.status());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Falha ao gerar checkout de cartao para pedido {}: {}", pedidoId, e.getMessage());
+            return ResponseEntity.status(502).body("Erro ao gerar cobranca de cartao. Tente novamente.");
+        }
+    }
+
+    /**
+     * Consulta o status do checkout de cartao de um pedido (usado pelo polling da
+     * pagina de retorno). Se a AbacatePay retornar PAID, confirma o pagamento
+     * (idempotente: desconta estoque e marca PAGO apenas uma vez).
+     */
+    @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
+    @GetMapping("/cartao/{pedidoId}/status")
+    public ResponseEntity<?> statusCartao(@PathVariable Long pedidoId, Authentication authentication) {
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Pedido pedido = pedidoRepository.findByIdWithDetails(pedidoId).orElse(null);
+        if (pedido == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        boolean isAdmin = userDetails.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin && !pedido.getUsuario().getId().equals(userDetails.getId())) {
+            return ResponseEntity.status(403).body("Pedido nao pertence ao usuario.");
+        }
+
+        if (pedido.getStatus() == StatusPedido.PAGO) {
+            return ResponseEntity.ok(Map.of("status", "PAID", "pedidoStatus", "PAGO"));
+        }
+
+        if (pedido.getPagamentoId() == null) {
+            return ResponseEntity.badRequest().body("Nenhuma cobranca de cartao gerada para este pedido.");
+        }
+
+        String status;
+        try {
+            status = abacatePayService.consultarStatusCheckout(pedido.getPagamentoId());
+        } catch (Exception e) {
+            log.error("Falha ao consultar status do checkout de cartao do pedido {}: {}", pedidoId, e.getMessage());
+            return ResponseEntity.status(502).body("Erro ao consultar status do pagamento.");
+        }
+
+        if ("PAID".equals(status)) {
+            pedidoPagamentoService.confirmarPagamento(pedidoId);
+        }
+
+        Pedido atualizado = pedidoRepository.findById(pedidoId).orElse(pedido);
+        var response = new LinkedHashMap<String, Object>();
+        response.put("status", status);
+        response.put("pedidoStatus", atualizado.getStatus().name());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Webhook chamado pela AbacatePay quando um pagamento PIX e confirmado.
      * Endpoint publico — autenticidade validada por (1) segredo na query string e
      * (2) assinatura HMAC-SHA256 no header X-Webhook-Signature (quando enviada).
@@ -221,9 +324,15 @@ public class PagamentoController {
                 log.warn("Webhook AbacatePay: pedido {} sem cobranca associada; ignorado", pedidoId);
                 return ResponseEntity.ok("sem-cobranca");
             }
+            // O endpoint de re-verificacao depende do tipo de cobranca: PIX usa
+            // /transparents/check; cartao (credito/debito) usa /checkouts/get.
+            boolean isCartao = pedido.getMetodoPagamento() == MetodoPagamento.CREDITO
+                    || pedido.getMetodoPagamento() == MetodoPagamento.DEBITO;
             String statusReal;
             try {
-                statusReal = abacatePayService.consultarStatus(chargeId);
+                statusReal = isCartao
+                        ? abacatePayService.consultarStatusCheckout(chargeId)
+                        : abacatePayService.consultarStatus(chargeId);
             } catch (Exception e) {
                 log.error("Webhook AbacatePay: falha ao re-verificar status do pedido {}: {}", pedidoId, e.getMessage());
                 return ResponseEntity.status(502).body("retry"); // AbacatePay reenvia o webhook

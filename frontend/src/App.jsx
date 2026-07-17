@@ -15,6 +15,7 @@ const AuthPage = lazy(() => import('./pages/AuthPage'));
 const ProductDetails = lazy(() => import('./pages/ProductDetails'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 const PixPayment = lazy(() => import('./pages/PixPayment'));
+const CartaoRetorno = lazy(() => import('./pages/CartaoRetorno'));
 const OrderSent = lazy(() => import('./pages/OrderSent'));
 const PoliticaPrivacidade = lazy(() => import('./pages/PoliticaPrivacidade'));
 const TermosUso = lazy(() => import('./pages/TermosUso'));
@@ -45,6 +46,7 @@ function App() {
               <Route path="/produto/:id" element={<ProductDetails />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/pagamento/pix/:pedidoId" element={<PixPayment />} />
+              <Route path="/pagamento/cartao/:pedidoId/retorno" element={<CartaoRetorno />} />
               <Route path="/pedido/enviado" element={<OrderSent />} />
               <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/termos-de-uso" element={<TermosUso />} />

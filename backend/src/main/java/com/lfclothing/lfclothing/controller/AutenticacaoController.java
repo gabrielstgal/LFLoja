@@ -23,8 +23,13 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import com.lfclothing.lfclothing.security.InputSanitizer;
 import com.lfclothing.lfclothing.service.RefreshTokenService;
+import com.lfclothing.lfclothing.service.LoginAttemptService;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,22 +45,54 @@ public class AutenticacaoController {
     private final PasswordEncoder encoder;
     private final JwtUtils jwtUtils;
     private final RefreshTokenService refreshTokenService;
+    private final LoginAttemptService loginAttemptService;
 
     public AutenticacaoController(AuthenticationManager authenticationManager, UsuarioRepository usuarioRepository,
-                          PasswordEncoder encoder, JwtUtils jwtUtils, RefreshTokenService refreshTokenService) {
+                          PasswordEncoder encoder, JwtUtils jwtUtils, RefreshTokenService refreshTokenService,
+                          LoginAttemptService loginAttemptService) {
         this.authenticationManager = authenticationManager;
         this.usuarioRepository = usuarioRepository;
         this.encoder = encoder;
         this.jwtUtils = jwtUtils;
         this.refreshTokenService = refreshTokenService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> autenticarUsuario(@Valid @RequestBody LoginRequisicao loginRequisicao,
                                                 HttpServletResponse response) {
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequisicao.email(), loginRequisicao.senha()));
+        String email = loginRequisicao.email();
+
+        // Conta ja bloqueada por excesso de tentativas: nem tenta autenticar.
+        if (loginAttemptService.isBloqueado(email)) {
+            logger.warn("Login recusado (conta temporariamente bloqueada): {}", email);
+            return respostaErro(HttpStatus.TOO_MANY_REQUESTS,
+                    "Conta temporariamente bloqueada por excesso de tentativas. "
+                    + "Tente novamente em " + loginAttemptService.tempoRestanteFormatado(email) + ".");
+        }
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, loginRequisicao.senha()));
+        } catch (AuthenticationException ex) {
+            int restantes = loginAttemptService.registrarFalha(email);
+            if (restantes <= 0) {
+                logger.warn("Conta bloqueada apos {} tentativas de login: {}",
+                        LoginAttemptService.MAX_TENTATIVAS, email);
+                return respostaErro(HttpStatus.TOO_MANY_REQUESTS,
+                        "Conta temporariamente bloqueada por excesso de tentativas. "
+                        + "Tente novamente em " + loginAttemptService.tempoRestanteFormatado(email) + ".");
+            }
+            String plural = (restantes == 1) ? "tentativa" : "tentativas";
+            return respostaErro(HttpStatus.UNAUTHORIZED,
+                    "Email ou senha incorretos. Voce tem mais " + restantes + " " + plural
+                    + " antes de a conta ser bloqueada temporariamente.");
+        }
+
+        // Sucesso: zera o historico de falhas da conta.
+        loginAttemptService.loginSucesso(email);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -73,6 +110,15 @@ public class AutenticacaoController {
                 userDetails.getNome(),
                 userDetails.getEmail(),
                 papeis));
+    }
+
+    /** Monta corpo de erro no mesmo formato do GlobalExceptionHandler ({timestamp,status,erro}). */
+    private ResponseEntity<Object> respostaErro(HttpStatus status, String mensagem) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now().toString());
+        body.put("status", status.value());
+        body.put("erro", mensagem);
+        return ResponseEntity.status(status).body(body);
     }
 
     @PostMapping("/refresh")
