@@ -153,12 +153,12 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
     setCupomAplicado(null);
     setCupomDados(null);
     setDesconto(0);
-  };
+  }, []);
 
   return (
     <CartContext.Provider value={{
